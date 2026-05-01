@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deal Tracker</title>
+</head>
+<body>
+
+    <h1>Create Deal</h1>
+
+    <form onsubmit="saveDeal(event)">
+        <label>Client Name:</label><br>
+        <input type="text" id="client"><br><br>
+
+        <label>Freelancer Name:</label><br>
+        <input type="text" id="freelancer"><br><br>
+
+        <label>Work Description:</label><br>
+        <input type="text" id="work"><br><br>
+
+        <label>Amount:</label><br>
+        <input type="number" id="amount"><br><br>
+
+        <label>
+            <input type="checkbox"> I agree to terms
+        </label><br><br>
+
+        <button type="submit">Save Deal</button>
+    </form><h2>Saved Deal:</h2>
+<p id="output"></p>
+
+<script>
+function saveDeal(event) {
+    event.preventDefault();
+
+    let client = document.getElementById("client").value;
+    let freelancer = document.getElementById("freelancer").value;
+    let work = document.getElementById("work").value;
+    let amount = document.getElementById("amount").value;
+
+    let deal = {
+        client: client,
+        freelancer: freelancer,
+        work: work,
+        amount: amount
+    };
+
+    // Save in local storage
+    localStorage.setItem("deal", JSON.stringify(deal));
+
+    displayDeal();
+}
+
+function displayDeal() {
+    let savedDeal = JSON.parse(localStorage.getItem("deal"));
+
+    if (savedDeal) {
+        let result = "Client: " + savedDeal.client + "<br>" +
+                     "Freelancer: " + savedDeal.freelancer + "<br>" +
+                     "Work: " + savedDeal.work + "<br>" +
+                     "Amount: " + savedDeal.amount;
+
+        document.getElementById("output").innerHTML = result;
+    }
+}
+
+// Load saved data when page opens
+window.onload = displayDeal;
+</script>
+function saveDeal(event) {
+    event.preventDefault();
+
+    let client = document.getElementById("client").value;
+    let freelancer = document.getElementById("freelancer").value;
+    let work = document.getElementById("work").value;
+    let amount = document.getElementById("amount").value;
+
+    let deal = {
+        client: client,
+        freelancer: freelancer,
+        work: work,
+        amount: amount
+    };
+
+    // Save in local storage
+    localStorage.setItem("deal", JSON.stringify(deal));
+
+    displayDeal();
+}
+
+function displayDeal() {
+    let savedDeal = JSON.parse(localStorage.getItem("deal"));
+
+    if (savedDeal) {
+        let result = "Client: " + savedDeal.client + "<br>" +
+                     "Freelancer: " + savedDeal.freelancer + "<br>" +
+                     "Work: " + savedDeal.work + "<br>" +
+                     "Amount: " + savedDeal.amount;
+
+        document.getElementById("output").innerHTML = result;
+    }
+}
+
+// Load saved data when page opens
+window.onload = displayDeal;
+</script></body>
+</html>
