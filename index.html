@@ -2,6 +2,10 @@
 <html>
 <head>
     <title>Deal Tracker</title>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+
 </head>
 <body>
 
@@ -29,6 +33,19 @@
 <p id="output"></p>
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+  authDomain: "freebie-5762a.firebaseapp.com",
+  projectId: "freebie-5762a",
+  storageBucket: "freebie-5762a.firebasestorage.app",
+  messagingSenderId: "621180509813",
+  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+  measurementId: "G-PQX9HHGD0J"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 function saveDeal(event) {
     event.preventDefault();
 
@@ -37,31 +54,33 @@ function saveDeal(event) {
     let work = document.getElementById("work").value;
     let amount = document.getElementById("amount").value;
 
-    let deal = { client, freelancer, work, amount };
-
-    let deals = JSON.parse(localStorage.getItem("deals")) || [];
-
-    deals.push(deal);
-
-    localStorage.setItem("deals", JSON.stringify(deals));
-
-    displayDeals();
+    db.collection("deals").add({
+        client: client,
+        freelancer: freelancer,
+        work: work,
+        amount: amount
+    })
+    .then(() => {
+        displayDeals();
+    });
 }
 
 function displayDeals() {
-    let deals = JSON.parse(localStorage.getItem("deals")) || [];
-
     let output = "";
 
-    deals.forEach((deal, index) => {
-        output += "<p><b>Deal " + (index + 1) + "</b><br>" +
-                  "Client: " + deal.client + "<br>" +
-                  "Freelancer: " + deal.freelancer + "<br>" +
-                  "Work: " + deal.work + "<br>" +
-                  "Amount: " + deal.amount + "</p><hr>";
-    });
+    db.collection("deals").get().then((snapshot) => {
+        snapshot.forEach((doc) => {
+            let deal = doc.data();
 
-    document.getElementById("output").innerHTML = output;
+            output += "<p><b>Deal</b><br>" +
+                      "Client: " + deal.client + "<br>" +
+                      "Freelancer: " + deal.freelancer + "<br>" +
+                      "Work: " + deal.work + "<br>" +
+                      "Amount: " + deal.amount + "</p><hr>";
+        });
+
+        document.getElementById("output").innerHTML = output;
+    });
 }
 
 window.onload = displayDeals;
