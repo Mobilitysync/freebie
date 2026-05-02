@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal Details – Freebie</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="container">
+
+    <a href="index.html" class="back-link">← Home</a>
+
+    <div id="loadingBox">
+      <p>Loading deal...</p>
+    </div>
+
+    <div id="dealBox" class="hidden">
+
+      <div class="deal-card">
+        <div class="deal-header">
+          <span class="deal-badge" id="dealStatus">Pending</span>
+          <h2 id="dealTitle">Deal</h2>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Freelancer</span>
+          <span class="deal-value" id="freelancerName"></span>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Client</span>
+          <span class="deal-value" id="clientName"></span>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Work</span>
+          <span class="deal-value" id="workDescription"></span>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Payment</span>
+          <span class="deal-value" id="paymentAmount"></span>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Deadline</span>
+          <span class="deal-value" id="deadline"></span>
+        </div>
+
+        <div class="deal-row">
+          <span class="deal-label">Created</span>
+          <span class="deal-value" id="createdAt"></span>
+        </div>
+      </div>
+
+      <div class="agreement-box">
+        <h3>Agreement</h3>
+        <p>Both parties must confirm they have read and agreed to the deal terms above.</p>
+
+        <div class="agree-row">
+          <span>Freelancer agreed:</span>
+          <span id="freelancerAgreedStatus" class="status-pill">❌ Not yet</span>
+        </div>
+
+        <div class="agree-row">
+          <span>Client agreed:</span>
+          <span id="clientAgreedStatus" class="status-pill">❌ Not yet</span>
+        </div>
+
+        <div id="agreeButtons" class="agree-buttons">
+          <button class="btn" id="agreeAsFreelancer" onclick="agreeAs('freelancer')">
+            I agree as Freelancer
+          </button>
+          <button class="btn btn-outline" id="agreeAsClient" onclick="agreeAs('client')">
+            I agree as Client
+          </button>
+        </div>
+
+        <div id="bothAgreedBox" class="success-box hidden">
+          ✅ Both sides have agreed. This deal is now active.
+        </div>
+      </div>
+
+      <div class="status-section">
+        <h3>Update Deal Status</h3>
+        <div class="status-buttons">
+          <button class="btn status-btn" onclick="updateStatus('in_progress')">Mark In Progress</button>
+          <button class="btn status-btn" onclick="updateStatus('delivered')">Mark Delivered</button>
+          <button class="btn status-btn" onclick="updateStatus('completed')">Mark Completed</button>
+          <button class="btn status-btn btn-danger" onclick="updateStatus('disputed')">Raise Dispute</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="errorBox" class="hidden">
+      <p style="color: red;">Deal not found. Check the link.</p>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+  authDomain: "freebie-5762a.firebaseapp.com",
+  projectId: "freebie-5762a",
+  storageBucket: "freebie-5762a.firebasestorage.app",
+  messagingSenderId: "621180509813",
+  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+  measurementId: "G-PQX9HHGD0J"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const params = new URLSearchParams(window.location.search);
+    const dealId = params.get('id');
+
+    let currentDeal = null;
+
+    async function loadDeal() {
+      if (!dealId) {
+        document.getElementById('loadingBox').classList.add('hidden');
+        document.getElementById('errorBox').classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const docRef = doc(db, 'deals', dealId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+          document.getElementById('loadingBox').classList.add('hidden');
+          document.getElementById('errorBox').classList.remove('hidden');
+          return;
+        }
+
+        currentDeal = docSnap.data();
+        renderDeal(currentDeal);
+
+        document.getElementById('loadingBox').classList.add('hidden');
+        document.getElementById('dealBox').classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Error loading deal:', err);
+        document.getElementById('loadingBox').innerHTML = '<p style="color:red">Error loading deal.</p>';
+      }
+    }
+
+    function renderDeal(deal) {
+      document.getElementById('dealTitle').textContent =
+        `${deal.freelancerName} × ${deal.clientName}`;
+
+      document.getElementById('freelancerName').textContent = deal.freelancerName;
+      document.getElementById('clientName').textContent = deal.clientName;
+      document.getElementById('workDescription').textContent = deal.workDescription;
+      document.getElementById('paymentAmount').textContent = `₹${deal.paymentAmount.toLocaleString('en-IN')}`;
+      document.getElementById('deadline').textContent = deal.deadline;
+      document.getElementById('createdAt').textContent =
+        new Date(deal.createdAt).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+
+      const statusEl = document.getElementById('dealStatus');
+      statusEl.textContent = deal.status.replace('_', ' ').toUpperCase();
+      statusEl.className = `deal-badge badge-${deal.status}`;
+
+      updateAgreementUI(deal);
+    }
+
+    function updateAgreementUI(deal) {
+      document.getElementById('freelancerAgreedStatus').textContent =
+        deal.freelancerAgreed ? '✅ Agreed' : '❌ Not yet';
+      document.getElementById('clientAgreedStatus').textContent =
+        deal.clientAgreed ? '✅ Agreed' : '❌ Not yet';
+
+      if (deal.freelancerAgreed && deal.clientAgreed) {
+        document.getElementById('agreeButtons').classList.add('hidden');
+        document.getElementById('bothAgreedBox').classList.remove('hidden');
+      }
+    }
+
+    window.agreeAs = async function(role) {
+      if (!dealId) return;
+      const field = role === 'freelancer' ? 'freelancerAgreed' : 'clientAgreed';
+      const btn = document.getElementById(
+        role === 'freelancer' ? 'agreeAsFreelancer' : 'agreeAsClient'
+      );
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+
+      try {
+        await updateDoc(doc(db, 'deals', dealId), { [field]: true });
+        currentDeal[field] = true;
+        updateAgreementUI(currentDeal);
+        btn.textContent = '✅ Agreed';
+      } catch (err) {
+        console.error('Error agreeing:', err);
+        btn.disabled = false;
+        btn.textContent = role === 'freelancer' ? 'I agree as Freelancer' : 'I agree as Client';
+      }
+    };
+
+    window.updateStatus = async function(newStatus) {
+      if (!dealId) return;
+      try {
+        await updateDoc(doc(db, 'deals', dealId), { status: newStatus });
+        currentDeal.status = newStatus;
+        const statusEl = document.getElementById('dealStatus');
+        statusEl.textContent = newStatus.replace('_', ' ').toUpperCase();
+        statusEl.className = `deal-badge badge-${newStatus}`;
+        alert(`Status updated to: ${newStatus.replace('_', ' ')}`);
+      } catch (err) {
+        console.error('Error updating status:', err);
+      }
+    };
+
+    loadDeal();
+  </script>
+
+</body>
+</html>
