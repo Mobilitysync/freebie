@@ -53,19 +53,26 @@
     const db = getFirestore(app);
 
     // If already logged in, redirect to their dashboard
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const snap = await getDoc(doc(db, 'users', user.uid));
-        if (snap.exists()) {
-          const role = snap.data().role;
-          if (role === 'freelancer') {
-            window.location.href = 'freelancer-dashboard.html';
-          } else if (role === 'client') {
-            window.location.href = 'client-dashboard.html';
-          }
-        }
+  onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const snap = await getDoc(doc(db, 'users', user.uid));
+    if (snap.exists()) {
+      const role = snap.data().role;
+      // Check if there's a pending redirect
+      const redirect = sessionStorage.getItem('redirectAfterLogin');
+      sessionStorage.removeItem('redirectAfterLogin');
+      if (redirect) {
+        window.location.href = redirect;
+        return;
       }
-    });
+      if (role === 'freelancer') {
+        window.location.href = 'freelancer-dashboard.html';
+      } else if (role === 'client') {
+        window.location.href = 'client-dashboard.html';
+      }
+    }
+  }
+});
   </script>
 
 </body>
