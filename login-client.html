@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Client Login – Freebie</title>
+	<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+	<div class="container">
+
+		<a href="index.html" class="back-link">← Back</a>
+
+		<h1>Client Login</h1>
+		<p class="tagline">View and agree to deals shared with you.</p>
+
+		<div class="auth-box">
+
+			<button id="googleBtn" class="btn btn-google">
+				<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="Google" />
+				Continue with Google
+			</button>
+
+			<div class="divider"><span>or</span></div>
+
+			<form id="emailForm">
+				<div class="form-group">
+					<label for="email">Email</label>
+					<input type="email" id="email" placeholder="you@example.com" required />
+				</div>
+				<div class="form-group">
+					<label for="password">Password</label>
+					<input type="password" id="password" placeholder="Min. 6 characters" required />
+				</div>
+				<div class="auth-actions">
+					<button type="button" id="loginBtn" class="btn">Login</button>
+					<button type="button" id="signupBtn" class="btn btn-outline">Sign Up</button>
+				</div>
+			</form>
+
+			<p id="authError" class="error-msg hidden"></p>
+
+		</div>
+
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+			authDomain: "freebie-5762a.firebaseapp.com",
+			projectId: "freebie-5762a",
+			storageBucket: "freebie-5762a.firebasestorage.app",
+			messagingSenderId: "621180509813",
+			appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+			measurementId: "G-PQX9HHGD0J"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+		const auth = getAuth(app);
+		const provider = new GoogleAuthProvider();
+
+		const errorEl = document.getElementById('authError');
+
+		function showError(msg) {
+			errorEl.textContent = msg;
+			errorEl.classList.remove('hidden');
+		}
+
+		async function saveUserRole(user) {
+			const ref = doc(db, 'users', user.uid);
+			const snap = await getDoc(ref);
+			if (!snap.exists()) {
+				await setDoc(ref, {
+					email: user.email,
+					role: 'client',
+					createdAt: new Date().toISOString()
+				});
+			}
+		}
+
+		async function handleSuccess(user) {
+			const ref = doc(db, 'users', user.uid);
+			const snap = await getDoc(ref);
+			if (snap.exists() && snap.data().role !== 'client') {
+				showError('This account is registered as a freelancer. Please use freelancer login.');
+				await auth.signOut();
+				return;
+			}
+			await saveUserRole(user);
+			window.location.href = 'client-dashboard.html';
+		}
+
+		document.getElementById('googleBtn').addEventListener('click', async () => {
+			try {
+				const result = await signInWithPopup(auth, provider);
+				await handleSuccess(result.user);
+			} catch (err) {
+				showError(err.message);
+			}
+		});
+
+		document.getElementById('loginBtn').addEventListener('click', async () => {
+			const email = document.getElementById('email').value.trim();
+			const password = document.getElementById('password').value;
+			try {
+				const result = await signInWithEmailAndPassword(auth, email, password);
+				await handleSuccess(result.user);
+			} catch (err) {
+				showError('Login failed: ' + err.message);
+			}
+		});
+
+		document.getElementById('signupBtn').addEventListener('click', async () => {
+			const email = document.getElementById('email').value.trim();
+			const password = document.getElementById('password').value;
+			try {
+				const result = await createUserWithEmailAndPassword(auth, email, password);
+				await handleSuccess(result.user);
+			} catch (err) {
+				showError('Signup failed: ' + err.message);
+			}
+		});
+	</script>
+
+</body>
+</html>

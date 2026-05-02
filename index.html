@@ -9,34 +9,64 @@
 <body>
 
   <div class="container">
+
     <h1>Freebie</h1>
     <p class="tagline">Create a deal. Share the link. Track it together.</p>
-    <a href="dashboard.html" class="btn">View My Deals</a>
-<a href="create.html" class="btn btn-outline" style="margin-left:12px;">+ New Deal</a>
+
+    <div class="role-cards">
+
+      <div class="role-card">
+        <div class="role-icon">💼</div>
+        <h2>I'm a Freelancer</h2>
+        <p>Create deals, share links with clients, and track agreements.</p>
+        <a href="login-freelancer.html" class="btn">Login as Freelancer</a>
+      </div>
+
+      <div class="role-card">
+        <div class="role-icon">🤝</div>
+        <h2>I'm a Client</h2>
+        <p>View deals shared with you, review terms, and agree.</p>
+        <a href="login-client.html" class="btn btn-outline">Login as Client</a>
+      </div>
+
+    </div>
+
   </div>
 
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-  authDomain: "freebie-5762a.firebaseapp.com",
-  projectId: "freebie-5762a",
-  storageBucket: "freebie-5762a.firebasestorage.app",
-  messagingSenderId: "621180509813",
-  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
-  measurementId: "G-PQX9HHGD0J"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+      measurementId: "G-PQX9HHGD0J"
+    };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    console.log("Firebase connected:", app.name);
-    window._db = db;
+    // If already logged in, redirect to their dashboard
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          const role = snap.data().role;
+          if (role === 'freelancer') {
+            window.location.href = 'freelancer-dashboard.html';
+          } else if (role === 'client') {
+            window.location.href = 'client-dashboard.html';
+          }
+        }
+      }
+    });
   </script>
 
-  <script src="app.js"></script>
 </body>
 </html>

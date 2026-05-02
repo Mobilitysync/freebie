@@ -28,6 +28,11 @@
       </div>
 
       <div class="form-group">
+        <label for="clientEmail">Client Email</label>
+        <input type="email" id="clientEmail" placeholder="client@example.com" required />
+      </div>
+
+      <div class="form-group">
         <label for="workDescription">Work Description</label>
         <textarea id="workDescription" rows="4" placeholder="e.g. Design a logo for the client's bakery brand. Includes 3 concepts and 2 revisions." required></textarea>
       </div>
@@ -66,6 +71,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -79,11 +85,19 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    const auth = getAuth(app);
 
     const form = document.getElementById('dealForm');
     const submitBtn = document.getElementById('submitBtn');
     const successBox = document.getElementById('successBox');
     const dealLinkEl = document.getElementById('dealLink');
+
+    // Redirect to login if not logged in
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = 'login-freelancer.html';
+      }
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -91,13 +105,17 @@
       submitBtn.textContent = 'Saving...';
       submitBtn.disabled = true;
 
+      const user = auth.currentUser;
+
       const dealData = {
         freelancerName: document.getElementById('freelancerName').value.trim(),
         clientName: document.getElementById('clientName').value.trim(),
+        clientEmail: document.getElementById('clientEmail').value.trim(),
         workDescription: document.getElementById('workDescription').value.trim(),
         paymentAmount: Number(document.getElementById('paymentAmount').value),
         deadline: document.getElementById('deadline').value,
         status: 'pending',
+        freelancerEmail: user ? user.email : '',
         freelancerAgreed: false,
         clientAgreed: false,
         createdAt: new Date().toISOString()

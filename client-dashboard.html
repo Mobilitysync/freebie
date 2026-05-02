@@ -1,0 +1,101 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Client Dashboard – Freebie</title>
+	<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+	<div class="container">
+
+		<div class="dashboard-header">
+			<h1>Deals Shared With Me</h1>
+			<div class="dashboard-actions">
+				<button id="logoutBtn" class="btn btn-outline">Logout</button>
+			</div>
+		</div>
+
+		<p id="welcomeMsg" class="tagline"></p>
+
+		<div id="dealsList">
+			<p class="loading-msg">Loading your deals...</p>
+		</div>
+
+	</div>
+
+	<script type="module">
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+		import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+		import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+		const firebaseConfig = {
+			apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+			authDomain: "freebie-5762a.firebaseapp.com",
+			projectId: "freebie-5762a",
+			storageBucket: "freebie-5762a.firebasestorage.app",
+			messagingSenderId: "621180509813",
+			appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+			measurementId: "G-PQX9HHGD0J"
+		};
+
+		const app = initializeApp(firebaseConfig);
+		const db = getFirestore(app);
+		const auth = getAuth(app);
+
+		onAuthStateChanged(auth, async (user) => {
+			if (!user) {
+				window.location.href = 'login-client.html';
+				return;
+			}
+
+			document.getElementById('welcomeMsg').textContent = `Welcome, ${user.displayName || user.email}`;
+
+			const q = query(collection(db, 'deals'), where('clientEmail', '==', user.email));
+			const snapshot = await getDocs(q);
+
+			const dealsList = document.getElementById('dealsList');
+
+			if (snapshot.empty) {
+				dealsList.innerHTML = `
+					<div class="empty-state">
+						<p>No deals shared with you yet.</p>
+						<p style="font-size:14px; color:#999;">Ask your freelancer to share a deal link with you.</p>
+					</div>`;
+				return;
+			}
+
+			let html = '';
+			snapshot.forEach(doc => {
+				const d = doc.data();
+				const statusClass = d.status === 'agreed' ? 'status-agreed' : d.status === 'completed' ? 'status-completed' : 'status-pending';
+				const agreedText = d.clientAgreed ? '✅ You have agreed' : '⏳ Awaiting your agreement';
+				html += `
+					<div class="deal-card">
+						<div class="deal-card-top">
+							<div>
+								<h3>${d.workDescription.substring(0, 60)}${d.workDescription.length > 60 ? '...' : ''}</h3>
+								<p class="deal-meta">Freelancer: ${d.freelancerName} &nbsp;|&nbsp; ₹${d.paymentAmount} &nbsp;|&nbsp; Due: ${d.deadline}</p>
+								<p class="deal-meta" style="margin-top:4px;">${agreedText}</p>
+							</div>
+							<span class="status-badge ${statusClass}">${d.status}</span>
+						</div>
+						<div class="deal-card-actions">
+							<a href="deal.html?id=${doc.id}" class="btn btn-sm">View & Agree</a>
+						</div>
+					</div>`;
+			});
+
+			dealsList.innerHTML = html;
+		});
+
+		document.getElementById('logoutBtn').addEventListener('click', async () => {
+			await signOut(auth);
+			window.location.href = 'index.html';
+		});
+	</script>
+
+</body>
+</html>
