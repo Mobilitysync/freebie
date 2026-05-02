@@ -239,3 +239,104 @@ h1 {
 .btn-danger:hover {
   background: #a93226;
 }
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 40px;
+  margin-bottom: 24px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.filter-btn {
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  border-color: #1a1a1a;
+}
+
+.filter-btn.active {
+  background: #1a1a1a;
+  color: #fff;
+  border-color: #1a1a1a;
+}
+
+.dash-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: box-shadow 0.2s;
+}
+
+.dash-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.dash-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.dash-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-top: 6px;
+  color: #1a1a1a;
+}
+
+.dash-amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+
+.dash-work {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 14px;
+  max-width: 100%;
+}
+
+.dash-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.dash-meta {
+  font-size: 13px;
+  color: #888;
+}
+
+.dash-view-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-decoration: none;
+}
+
+.dash-view-btn:hover {
+  text-decoration: underline;
+}
