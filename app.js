@@ -1,0 +1,1 @@
+console.log("Freebie - Deal Tracker loaded.");
