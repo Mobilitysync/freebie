@@ -47,42 +47,36 @@
     </form>
 
     <div id="successBox" class="success-box hidden">
-  <p>✅ Deal created successfully!</p>
-  <p>Share this link with your client:</p>
-  <a id="dealLink" href="#" target="_blank"></a>
-  <br/>
-  <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
-    <button onclick="shareOnWhatsApp()" style="background:#25D366; color:#fff; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; border:none; cursor:pointer;">
-      Share on WhatsApp
-    </button>
-    <button class="btn btn-outline" onclick="copyLink()">
-      Copy Link
-    </button>
-  </div>
-</div>
       <p>✅ Deal created successfully!</p>
       <p>Share this link with your client:</p>
       <a id="dealLink" href="#" target="_blank"></a>
       <br/>
-      <button class="btn" onclick="copyLink()">Copy Link</button>
+      <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+        <button onclick="shareOnWhatsApp()" style="background:#25D366; color:#fff; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; border:none; cursor:pointer;">
+          Share on WhatsApp
+        </button>
+        <button class="btn btn-outline" onclick="copyLink()">
+          Copy Link
+        </button>
+      </div>
     </div>
 
   </div>
 
-  <!-- Firebase -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-  authDomain: "freebie-5762a.firebaseapp.com",
-  projectId: "freebie-5762a",
-  storageBucket: "freebie-5762a.firebasestorage.app",
-  messagingSenderId: "621180509813",
-  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
-  measurementId: "G-PQX9HHGD0J"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+      measurementId: "G-PQX9HHGD0J"
+    };
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
@@ -131,11 +125,12 @@ const firebaseConfig = {
       navigator.clipboard.writeText(dealLinkEl.href);
       alert('Link copied!');
     };
+
     window.shareOnWhatsApp = function() {
-  const url = document.getElementById('dealLink').href;
-  const message = `Hi! I've created a deal for you on Freebie. Please review and agree to the terms here: ${url}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-};
+      const url = document.getElementById('dealLink').href;
+      const message = `Hi! I've created a deal for you on Freebie. Please review and agree to the terms here: ${url}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    };
   </script>
 
 </body>
