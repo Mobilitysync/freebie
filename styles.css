@@ -340,3 +340,18 @@ h1 {
 .dash-view-btn:hover {
   text-decoration: underline;
 }
+.share-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-whatsapp {
+  background: #25D366;
+  color: #fff;
+}
+
+.btn-whatsapp:hover {
+  background: #1ebe5d;
+}
