@@ -3,14 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Deal Details – Freebie</title>
+  <title>Deal Details - Freebie</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">Freebie</a>
+    <div class="nav-right">
+      <span id="navUserName"></span>
+      <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
   <div class="container">
 
-    <a href="index.html" class="back-link">← Home</a>
+    <a href="#" class="back-link" id="backLink">&larr; Back to Dashboard</a>
 
     <div id="loadingBox">
       <p>Loading deal...</p>
@@ -61,43 +69,41 @@
 
         <div class="agree-row">
           <span>Freelancer agreed:</span>
-          <span id="freelancerAgreedStatus" class="status-pill">❌ Not yet</span>
+          <span id="freelancerAgreedStatus" class="status-pill">&#10060; Not yet</span>
         </div>
 
         <div class="agree-row">
           <span>Client agreed:</span>
-          <span id="clientAgreedStatus" class="status-pill">❌ Not yet</span>
+          <span id="clientAgreedStatus" class="status-pill">&#10060; Not yet</span>
         </div>
 
-<div id="agreeButtons" class="agree-buttons">
-  <button class="btn" id="agreeAsFreelancer" onclick="agreeAs('freelancer')">
-    I agree as Freelancer
-  </button>
-  <button class="btn btn-outline" id="agreeAsClient" onclick="agreeAs('client')">
-    I agree as Client
-  </button>
-</div>
+        <div id="freelancerView" class="hidden">
+          <div id="freelancerAgreeButtons" class="agree-buttons">
+            <button class="btn" id="agreeAsFreelancer">I agree as Freelancer</button>
+          </div>
 
-<div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
-  <button class="btn btn-whatsapp" onclick="shareOnWhatsApp()" style="background:#25D366; color:#fff; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; border:none; cursor:pointer;">
-    Share on WhatsApp
-  </button>
-  <button class="btn btn-outline" onclick="copyDealLink()" style="padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">
-    Copy Link
-  </button>
-</div>
+          <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+            <button class="btn" id="markCompletedBtn">Mark as Completed</button>
+            <button class="btn btn-whatsapp" id="shareWhatsAppBtn" style="background:#25D366; color:#fff; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; border:none; cursor:pointer;">
+              Share on WhatsApp
+            </button>
+            <button class="btn btn-outline" id="copyLinkBtn" style="padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">
+              Copy Link
+            </button>
+          </div>
+          <p id="freelancerCompletedMessage" class="hidden">Deal marked as completed.</p>
+          <p id="copyLinkMessage" class="hidden">Link copied!</p>
+        </div>
+
+        <div id="clientView" class="hidden">
+          <div id="clientAgreeButtons" class="agree-buttons">
+            <button class="btn btn-outline" id="agreeAsClient">I Agree</button>
+          </div>
+          <p id="clientAgreedMessage" class="hidden">You have agreed to this deal.</p>
+        </div>
+
         <div id="bothAgreedBox" class="success-box hidden">
-          ✅ Both sides have agreed. This deal is now active.
-        </div>
-      </div>
-
-      <div class="status-section">
-        <h3>Update Deal Status</h3>
-        <div class="status-buttons">
-          <button class="btn status-btn" onclick="updateStatus('in_progress')">Mark In Progress</button>
-          <button class="btn status-btn" onclick="updateStatus('delivered')">Mark Delivered</button>
-          <button class="btn status-btn" onclick="updateStatus('completed')">Mark Completed</button>
-          <button class="btn status-btn btn-danger" onclick="updateStatus('disputed')">Raise Dispute</button>
+          &#9989; Both sides have agreed. This deal is now active.
         </div>
       </div>
 
@@ -111,74 +117,48 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-  authDomain: "freebie-5762a.firebaseapp.com",
-  projectId: "freebie-5762a",
-  storageBucket: "freebie-5762a.firebasestorage.app",
-  messagingSenderId: "621180509813",
-  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
-  measurementId: "G-PQX9HHGD0J"
-};
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+    };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     const params = new URLSearchParams(window.location.search);
     const dealId = params.get('id');
 
     let currentDeal = null;
+    let currentUserRole = null;
 
-    async function loadDeal() {
-      if (!dealId) {
-        document.getElementById('loadingBox').classList.add('hidden');
-        document.getElementById('errorBox').classList.remove('hidden');
-        return;
-      }
-
-      try {
-        const docRef = doc(db, 'deals', dealId);
-        const docSnap = await getDoc(docRef);
-
-        if (!docSnap.exists()) {
-          document.getElementById('loadingBox').classList.add('hidden');
-          document.getElementById('errorBox').classList.remove('hidden');
-          return;
-        }
-
-        currentDeal = docSnap.data();
-        renderDeal(currentDeal);
-
-        document.getElementById('loadingBox').classList.add('hidden');
-        document.getElementById('dealBox').classList.remove('hidden');
-
-      } catch (err) {
-        console.error('Error loading deal:', err);
-        document.getElementById('loadingBox').innerHTML = '<p style="color:red">Error loading deal.</p>';
-      }
+    function formatDate(dateStr) {
+      if (!dateStr) return 'No deadline';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    function renderDeal(deal) {
-      document.getElementById('dealTitle').textContent =
-        `${deal.freelancerName} × ${deal.clientName}`;
+    function showError(message = 'Deal not found. Check the link.') {
+      document.getElementById('loadingBox').classList.add('hidden');
+      document.getElementById('dealBox').classList.add('hidden');
+      const errorBox = document.getElementById('errorBox');
+      errorBox.innerHTML = `<p style="color: red;">${message}</p>`;
+      errorBox.classList.remove('hidden');
+    }
 
-      document.getElementById('freelancerName').textContent = deal.freelancerName;
-      document.getElementById('clientName').textContent = deal.clientName;
-      document.getElementById('workDescription').textContent = deal.workDescription;
-      document.getElementById('paymentAmount').textContent = `₹${deal.paymentAmount.toLocaleString('en-IN')}`;
-      document.getElementById('deadline').textContent = deal.deadline;
-      document.getElementById('createdAt').textContent =
-        new Date(deal.createdAt).toLocaleDateString('en-IN', {
-          day: 'numeric', month: 'long', year: 'numeric'
-        });
-
-      const statusEl = document.getElementById('dealStatus');
-      statusEl.textContent = deal.status.replace('_', ' ').toUpperCase();
-      statusEl.className = `deal-badge badge-${deal.status}`;
-
-      updateAgreementUI(deal);
+    function setRoleView(role) {
+      document.getElementById('freelancerView').classList.toggle('hidden', role !== 'freelancer');
+      document.getElementById('clientView').classList.toggle('hidden', role !== 'client');
+      document.getElementById('backLink').href = role === 'freelancer'
+        ? 'freelancer-dashboard.html'
+        : 'client-dashboard.html';
     }
 
     function updateAgreementUI(deal) {
@@ -188,57 +168,159 @@
         deal.clientAgreed ? '✅ Agreed' : '❌ Not yet';
 
       if (deal.freelancerAgreed && deal.clientAgreed) {
-        document.getElementById('agreeButtons').classList.add('hidden');
+        document.getElementById('freelancerAgreeButtons').classList.add('hidden');
+        document.getElementById('clientAgreeButtons').classList.add('hidden');
+        document.getElementById('clientAgreedMessage').classList.remove('hidden');
         document.getElementById('bothAgreedBox').classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('freelancerAgreeButtons').classList.toggle('hidden', currentUserRole !== 'freelancer' || deal.freelancerAgreed);
+      document.getElementById('clientAgreeButtons').classList.toggle('hidden', currentUserRole !== 'client' || deal.clientAgreed);
+      document.getElementById('bothAgreedBox').classList.add('hidden');
+      document.getElementById('clientAgreedMessage').classList.toggle('hidden', !deal.clientAgreed);
+    }
+
+    function updateFreelancerActionsUI(deal) {
+      const markCompletedBtn = document.getElementById('markCompletedBtn');
+      const freelancerCompletedMessage = document.getElementById('freelancerCompletedMessage');
+
+      if (deal.status === 'completed') {
+        markCompletedBtn.classList.add('hidden');
+        freelancerCompletedMessage.classList.remove('hidden');
+      } else {
+        markCompletedBtn.classList.remove('hidden');
+        freelancerCompletedMessage.classList.add('hidden');
       }
     }
 
-    window.agreeAs = async function(role) {
-      if (!dealId) return;
-      const field = role === 'freelancer' ? 'freelancerAgreed' : 'clientAgreed';
-      const btn = document.getElementById(
-        role === 'freelancer' ? 'agreeAsFreelancer' : 'agreeAsClient'
-      );
+    function renderDeal(deal) {
+      document.getElementById('dealTitle').textContent = `${deal.freelancerName} x ${deal.clientName}`;
+      document.getElementById('freelancerName').textContent = deal.freelancerName || 'Unknown';
+      document.getElementById('clientName').textContent = deal.clientName || 'Unknown';
+      document.getElementById('workDescription').textContent = deal.workDescription || '—';
+      document.getElementById('paymentAmount').textContent = `₹${(deal.paymentAmount || 0).toLocaleString('en-IN')}`;
+      document.getElementById('deadline').textContent = formatDate(deal.deadline);
+      document.getElementById('createdAt').textContent = deal.createdAt
+        ? new Date(deal.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+        : '—';
+
+      const statusEl = document.getElementById('dealStatus');
+      statusEl.textContent = deal.status.replace('_', ' ').toUpperCase();
+      statusEl.className = `deal-badge badge-${deal.status}`;
+
+      updateAgreementUI(deal);
+      updateFreelancerActionsUI(deal);
+    }
+
+    async function loadDeal(user) {
+      if (!dealId) { showError(); return; }
+
+      try {
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        if (!userSnap.exists()) { showError('User profile not found.'); return; }
+
+        currentUserRole = userSnap.data().role;
+        setRoleView(currentUserRole);
+
+        const dealSnap = await getDoc(doc(db, 'deals', dealId));
+        if (!dealSnap.exists()) { showError(); return; }
+
+        currentDeal = dealSnap.data();
+        renderDeal(currentDeal);
+
+        document.getElementById('loadingBox').classList.add('hidden');
+        document.getElementById('dealBox').classList.remove('hidden');
+      } catch (err) {
+        console.error('Error loading deal:', err);
+        document.getElementById('loadingBox').innerHTML = '<p style="color:red">Error loading deal.</p>';
+      }
+    }
+
+    // Freelancer agree
+    document.getElementById('agreeAsFreelancer').addEventListener('click', async () => {
+      const btn = document.getElementById('agreeAsFreelancer');
       btn.disabled = true;
       btn.textContent = 'Saving...';
-
       try {
-        await updateDoc(doc(db, 'deals', dealId), { [field]: true });
-        currentDeal[field] = true;
-        updateAgreementUI(currentDeal);
-        btn.textContent = '✅ Agreed';
+        await updateDoc(doc(db, 'deals', dealId), { freelancerAgreed: true });
+        currentDeal.freelancerAgreed = true;
+        if (currentDeal.clientAgreed) {
+          await updateDoc(doc(db, 'deals', dealId), { status: 'agreed' });
+          currentDeal.status = 'agreed';
+        }
+        renderDeal(currentDeal);
       } catch (err) {
-        console.error('Error agreeing:', err);
+        console.error(err);
         btn.disabled = false;
-        btn.textContent = role === 'freelancer' ? 'I agree as Freelancer' : 'I agree as Client';
+        btn.textContent = 'I agree as Freelancer';
       }
-    };
-window.shareOnWhatsApp = function() {
-  const url = window.location.href;
-  const message = `Hi! I've created a deal for you on Freebie. Please review and agree to the terms here: ${url}`;
-  window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-};
+    });
 
-window.copyDealLink = function() {
-  navigator.clipboard.writeText(window.location.href).then(() => {
-    alert('Link copied!');
-  });
-};
-    window.updateStatus = async function(newStatus) {
-      if (!dealId) return;
+    // Client agree
+    document.getElementById('agreeAsClient').addEventListener('click', async () => {
+      const btn = document.getElementById('agreeAsClient');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
       try {
-        await updateDoc(doc(db, 'deals', dealId), { status: newStatus });
-        currentDeal.status = newStatus;
-        const statusEl = document.getElementById('dealStatus');
-        statusEl.textContent = newStatus.replace('_', ' ').toUpperCase();
-        statusEl.className = `deal-badge badge-${newStatus}`;
-        alert(`Status updated to: ${newStatus.replace('_', ' ')}`);
+        const dealRef = doc(db, 'deals', dealId);
+        await updateDoc(dealRef, { clientAgreed: true });
+        currentDeal.clientAgreed = true;
+        if (currentDeal.freelancerAgreed) {
+          await updateDoc(dealRef, { status: 'agreed' });
+          currentDeal.status = 'agreed';
+        }
+        renderDeal(currentDeal);
+        document.getElementById('clientAgreeButtons').classList.add('hidden');
+        document.getElementById('clientAgreedMessage').classList.remove('hidden');
       } catch (err) {
-        console.error('Error updating status:', err);
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'I Agree';
       }
-    };
+    });
 
-    loadDeal();
+    // Mark completed
+    document.getElementById('markCompletedBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('markCompletedBtn');
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+      try {
+        await updateDoc(doc(db, 'deals', dealId), { status: 'completed' });
+        currentDeal.status = 'completed';
+        renderDeal(currentDeal);
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Mark as Completed';
+      }
+    });
+
+    // Share WhatsApp
+    document.getElementById('shareWhatsAppBtn').addEventListener('click', () => {
+      const msg = `Hi! Please review and agree to our deal here: ${window.location.href}`;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+
+    // Copy link
+    document.getElementById('copyLinkBtn').addEventListener('click', () => {
+      navigator.clipboard.writeText(window.location.href).then(() => {
+        const msg = document.getElementById('copyLinkMessage');
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 2000);
+      });
+    });
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'index.html'; return; }
+      document.getElementById('navUserName').textContent = user.displayName || user.email || '';
+      await loadDeal(user);
+    });
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
   </script>
 
 </body>
