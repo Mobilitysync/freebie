@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Create a Deal – Freebie</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="container">
+
+    <a href="index.html" class="back-link">← Back</a>
+
+    <h1>Create a Deal</h1>
+    <p class="tagline">Fill in the details. Share the link. Both sides stay clear.</p>
+
+    <form id="dealForm" class="deal-form">
+
+      <div class="form-group">
+        <label for="freelancerName">Your Name (Freelancer)</label>
+        <input type="text" id="freelancerName" placeholder="e.g. Rahul Sharma" required />
+      </div>
+
+      <div class="form-group">
+        <label for="clientName">Client Name</label>
+        <input type="text" id="clientName" placeholder="e.g. Priya Mehta" required />
+      </div>
+
+      <div class="form-group">
+        <label for="workDescription">Work Description</label>
+        <textarea id="workDescription" rows="4" placeholder="e.g. Design a logo for the client's bakery brand. Includes 3 concepts and 2 revisions." required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="paymentAmount">Payment Amount (₹)</label>
+        <input type="number" id="paymentAmount" placeholder="e.g. 5000" required />
+      </div>
+
+      <div class="form-group">
+        <label for="deadline">Deadline</label>
+        <input type="date" id="deadline" required />
+      </div>
+
+      <button type="submit" class="btn" id="submitBtn">Create Deal</button>
+
+    </form>
+
+    <div id="successBox" class="success-box hidden">
+      <p>✅ Deal created successfully!</p>
+      <p>Share this link with your client:</p>
+      <a id="dealLink" href="#" target="_blank"></a>
+      <br/>
+      <button class="btn" onclick="copyLink()">Copy Link</button>
+    </div>
+
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+  authDomain: "freebie-5762a.firebaseapp.com",
+  projectId: "freebie-5762a",
+  storageBucket: "freebie-5762a.firebasestorage.app",
+  messagingSenderId: "621180509813",
+  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+  measurementId: "G-PQX9HHGD0J"
+};
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const form = document.getElementById('dealForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const successBox = document.getElementById('successBox');
+    const dealLinkEl = document.getElementById('dealLink');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      submitBtn.textContent = 'Saving...';
+      submitBtn.disabled = true;
+
+      const dealData = {
+        freelancerName: document.getElementById('freelancerName').value.trim(),
+        clientName: document.getElementById('clientName').value.trim(),
+        workDescription: document.getElementById('workDescription').value.trim(),
+        paymentAmount: Number(document.getElementById('paymentAmount').value),
+        deadline: document.getElementById('deadline').value,
+        status: 'pending',
+        freelancerAgreed: false,
+        clientAgreed: false,
+        createdAt: new Date().toISOString()
+      };
+
+      try {
+        const docRef = await addDoc(collection(db, 'deals'), dealData);
+        const dealUrl = `${window.location.origin}/deal.html?id=${docRef.id}`;
+
+        dealLinkEl.href = dealUrl;
+        dealLinkEl.textContent = dealUrl;
+
+        form.classList.add('hidden');
+        successBox.classList.remove('hidden');
+
+      } catch (err) {
+        console.error('Error saving deal:', err);
+        alert('Something went wrong. Check console for details.');
+        submitBtn.textContent = 'Create Deal';
+        submitBtn.disabled = false;
+      }
+    });
+
+    window.copyLink = function() {
+      navigator.clipboard.writeText(dealLinkEl.href);
+      alert('Link copied!');
+    };
+  </script>
+
+</body>
+</html>

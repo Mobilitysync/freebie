@@ -14,6 +14,28 @@
     <a href="create.html" class="btn">Create a Deal</a>
   </div>
 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+  authDomain: "freebie-5762a.firebaseapp.com",
+  projectId: "freebie-5762a",
+  storageBucket: "freebie-5762a.firebasestorage.app",
+  messagingSenderId: "621180509813",
+  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
+  measurementId: "G-PQX9HHGD0J"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    console.log("Firebase connected:", app.name);
+    window._db = db;
+  </script>
+
   <script src="app.js"></script>
 </body>
 </html>
