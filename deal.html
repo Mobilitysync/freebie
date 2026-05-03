@@ -84,15 +84,11 @@
 
           <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
             <button class="btn" id="markCompletedBtn">Mark as Completed</button>
-            <button class="btn btn-whatsapp" id="shareWhatsAppBtn" style="background:#25D366; color:#fff; padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; border:none; cursor:pointer;">
-              Share on WhatsApp
-            </button>
-            <button class="btn btn-outline" id="copyLinkBtn" style="padding:14px 32px; border-radius:8px; font-size:16px; font-weight:600; cursor:pointer;">
-              Copy Link
-            </button>
+            <button class="btn btn-whatsapp" id="shareWhatsAppBtn">Share on WhatsApp</button>
+            <button class="btn btn-outline" id="copyLinkBtn">Copy Link</button>
           </div>
           <p id="freelancerCompletedMessage" class="hidden">Deal marked as completed.</p>
-          <p id="copyLinkMessage" class="hidden">Link copied!</p>
+          <p id="copyLinkMessage" class="hidden" style="color:green; margin-top:8px;">Link copied!</p>
         </div>
 
         <div id="clientView" class="hidden">
@@ -105,6 +101,14 @@
         <div id="bothAgreedBox" class="success-box hidden">
           &#9989; Both sides have agreed. This deal is now active.
         </div>
+
+        <div id="disputeSection" class="hidden" style="margin-top:16px;">
+          <button class="btn btn-danger" id="raiseDisputeBtn">⚠️ Raise a Dispute</button>
+          <p id="disputeMessage" class="hidden" style="color:#c0392b; margin-top:8px; font-size:14px;">
+            Dispute raised. The deal has been flagged.
+          </p>
+        </div>
+
       </div>
 
     </div>
@@ -176,8 +180,10 @@
         return;
       }
 
-      document.getElementById('freelancerAgreeButtons').classList.toggle('hidden', currentUserRole !== 'freelancer' || deal.freelancerAgreed);
-      document.getElementById('clientAgreeButtons').classList.toggle('hidden', currentUserRole !== 'client' || deal.clientAgreed);
+      document.getElementById('freelancerAgreeButtons').classList.toggle('hidden',
+        currentUserRole !== 'freelancer' || deal.freelancerAgreed);
+      document.getElementById('clientAgreeButtons').classList.toggle('hidden',
+        currentUserRole !== 'client' || deal.clientAgreed);
       document.getElementById('bothAgreedBox').classList.add('hidden');
       document.getElementById('clientAgreedMessage').classList.toggle('hidden', !deal.clientAgreed);
     }
@@ -185,7 +191,6 @@
     function updateFreelancerActionsUI(deal) {
       const markCompletedBtn = document.getElementById('markCompletedBtn');
       const freelancerCompletedMessage = document.getElementById('freelancerCompletedMessage');
-
       if (deal.status === 'completed') {
         markCompletedBtn.classList.add('hidden');
         freelancerCompletedMessage.classList.remove('hidden');
@@ -212,11 +217,27 @@
 
       updateAgreementUI(deal);
       updateFreelancerActionsUI(deal);
+
+      // Dispute section — show only when deal is 'agreed', hide if already disputed/completed
+      const disputeSection = document.getElementById('disputeSection');
+      const raiseDisputeBtn = document.getElementById('raiseDisputeBtn');
+      const disputeMessage = document.getElementById('disputeMessage');
+
+      if (deal.status === 'disputed') {
+        disputeSection.classList.remove('hidden');
+        raiseDisputeBtn.classList.add('hidden');
+        disputeMessage.classList.remove('hidden');
+      } else if (deal.status === 'agreed') {
+        disputeSection.classList.remove('hidden');
+        raiseDisputeBtn.classList.remove('hidden');
+        disputeMessage.classList.add('hidden');
+      } else {
+        disputeSection.classList.add('hidden');
+      }
     }
 
     async function loadDeal(user) {
       if (!dealId) { showError(); return; }
-
       try {
         const userSnap = await getDoc(doc(db, 'users', user.uid));
         if (!userSnap.exists()) { showError('User profile not found.'); return; }
@@ -225,11 +246,7 @@
         setRoleView(currentUserRole);
 
         unsubscribeDealSnapshot = onSnapshot(doc(db, 'deals', dealId), (snapshot) => {
-          if (!snapshot.exists()) {
-            showError();
-            return;
-          }
-
+          if (!snapshot.exists()) { showError(); return; }
           currentDeal = snapshot.data();
           renderDeal(currentDeal);
           document.getElementById('loadingBox').classList.add('hidden');
@@ -247,13 +264,11 @@
       btn.disabled = true;
       btn.textContent = 'Saving...';
       try {
-        await updateDoc(doc(db, 'deals', dealId), { freelancerAgreed: true });
-        currentDeal.freelancerAgreed = true;
+        const dealRef = doc(db, 'deals', dealId);
+        await updateDoc(dealRef, { freelancerAgreed: true });
         if (currentDeal.clientAgreed) {
-          await updateDoc(doc(db, 'deals', dealId), { status: 'agreed' });
-          currentDeal.status = 'agreed';
+          await updateDoc(dealRef, { status: 'agreed' });
         }
-        renderDeal(currentDeal);
       } catch (err) {
         console.error(err);
         btn.disabled = false;
@@ -269,14 +284,9 @@
       try {
         const dealRef = doc(db, 'deals', dealId);
         await updateDoc(dealRef, { clientAgreed: true });
-        currentDeal.clientAgreed = true;
         if (currentDeal.freelancerAgreed) {
           await updateDoc(dealRef, { status: 'agreed' });
-          currentDeal.status = 'agreed';
         }
-        renderDeal(currentDeal);
-        document.getElementById('clientAgreeButtons').classList.add('hidden');
-        document.getElementById('clientAgreedMessage').classList.remove('hidden');
       } catch (err) {
         console.error(err);
         btn.disabled = false;
@@ -291,12 +301,26 @@
       btn.textContent = 'Saving...';
       try {
         await updateDoc(doc(db, 'deals', dealId), { status: 'completed' });
-        currentDeal.status = 'completed';
-        renderDeal(currentDeal);
       } catch (err) {
         console.error(err);
         btn.disabled = false;
         btn.textContent = 'Mark as Completed';
+      }
+    });
+
+    // Raise dispute
+    document.getElementById('raiseDisputeBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('raiseDisputeBtn');
+      const confirmed = confirm('Are you sure you want to raise a dispute? This will flag the deal.');
+      if (!confirmed) return;
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+      try {
+        await updateDoc(doc(db, 'deals', dealId), { status: 'disputed' });
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = '⚠️ Raise a Dispute';
       }
     });
 
@@ -315,25 +339,25 @@
       });
     });
 
-    onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    // Save deal URL so we can return after login
-    sessionStorage.setItem('redirectAfterLogin', window.location.href);
-    window.location.href = 'index.html';
-    return;
-  }
-  await loadDeal(user);
-});
-
+    // Logout
     document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      if (unsubscribeDealSnapshot) unsubscribeDealSnapshot();
       await signOut(auth);
       window.location.href = 'index.html';
     });
 
-    window.addEventListener('beforeunload', () => {
-      if (unsubscribeDealSnapshot) {
-        unsubscribeDealSnapshot();
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        sessionStorage.setItem('redirectAfterLogin', window.location.href);
+        window.location.href = 'index.html';
+        return;
       }
+      document.getElementById('navUserName').textContent = user.displayName || user.email;
+      await loadDeal(user);
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (unsubscribeDealSnapshot) unsubscribeDealSnapshot();
     });
   </script>
 
