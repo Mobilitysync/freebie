@@ -391,6 +391,15 @@ body {
 .status-pending   { background: #fff3cd; color: #856404; }
 .status-agreed    { background: #d1e7dd; color: #0a3622; }
 .status-completed { background: #1a1a1a; color: #fff; }
+.status-expired {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-expired {
+  background: #f8d7da;
+  color: #721c24;
+}
 
 .empty-state {
   text-align: center;
