@@ -1,31 +1,33 @@
 /**
  * Firebase Functions config:
- * 1. Set the Gmail sender address:
- *    firebase functions:secrets:set GMAIL_EMAIL
- * 2. Set a Gmail app password for that sender:
- *    firebase functions:secrets:set GMAIL_APP_PASSWORD
- * 3. Deploy:
- *    firebase deploy --only functions
+ *   firebase functions:config:set gmail.user="your-gmail@gmail.com" gmail.password="your-gmail-app-password"
+ *   firebase deploy --only functions
  */
 
-const nodemailer = require("nodemailer");
+const functions = require("firebase-functions/v1");
 const logger = require("firebase-functions/logger");
-const { defineSecret } = require("firebase-functions/params");
-const {
-  onDocumentCreated,
-  onDocumentUpdated,
-} = require("firebase-functions/v2/firestore");
+const nodemailer = require("nodemailer");
 
-const gmailEmail = defineSecret("GMAIL_EMAIL");
-const gmailAppPassword = defineSecret("GMAIL_APP_PASSWORD");
 const appBaseUrl = "https://freebie-5762a.web.app";
 
-function createTransporter() {
+function getGmailConfig() {
+  const gmail = functions.config().gmail || {};
+
+  if (!gmail.user || !gmail.password) {
+    throw new Error(
+      'Missing Gmail config. Run: firebase functions:config:set gmail.user="your-gmail@gmail.com" gmail.password="your-gmail-app-password"'
+    );
+  }
+
+  return gmail;
+}
+
+function createTransporter(gmail) {
   return nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: gmailEmail.value(),
-      pass: gmailAppPassword.value(),
+      user: gmail.user,
+      pass: gmail.password,
     },
   });
 }
@@ -41,6 +43,7 @@ function escapeHtml(value) {
 
 function formatInr(amount) {
   const numericAmount = Number(amount);
+
   if (!Number.isFinite(numericAmount)) {
     return "Not specified";
   }
@@ -57,7 +60,33 @@ function formatDeadline(deadline) {
     return "Not specified";
   }
 
+  if (typeof deadline.toDate === "function") {
+    return deadline.toDate().toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    });
+  }
+
+  if (typeof deadline === "string") {
+    const dateOnlyMatch = deadline.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+
+      return date.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      });
+    }
+  }
+
   const date = new Date(deadline);
+
   if (Number.isNaN(date.getTime())) {
     return String(deadline);
   }
@@ -66,125 +95,185 @@ function formatDeadline(deadline) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
+}
+
+function dealLink(dealId) {
+  return `${appBaseUrl}/deal.html?id=${encodeURIComponent(dealId)}`;
 }
 
 function buttonHtml(url, label) {
   return `
     <a href="${escapeHtml(url)}"
-       style="display:inline-block;background:#1a1a1a;color:#ffffff;text-decoration:none;padding:14px 24px;border-radius:8px;font-weight:700;margin-top:18px;">
+       style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:6px;font-weight:700;margin-top:18px;">
       ${escapeHtml(label)}
     </a>`;
 }
 
-exports.onDealCreated = onDocumentCreated(
-  {
-    document: "deals/{dealId}",
-    secrets: [gmailEmail, gmailAppPassword],
-  },
-  async (event) => {
-    const snapshot = event.data;
-    if (!snapshot) {
-      logger.warn("onDealCreated fired without snapshot data.");
-      return;
-    }
+function detailRow(label, value) {
+  return `
+    <tr>
+      <td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;width:130px;vertical-align:top;">${escapeHtml(label)}</td>
+      <td style="padding:10px;border-bottom:1px solid #e5e7eb;vertical-align:top;">${escapeHtml(value)}</td>
+    </tr>`;
+}
 
+function summaryTable(deal) {
+  return `
+    <table style="width:100%;border-collapse:collapse;margin-top:18px;">
+      ${detailRow("Freelancer", deal.freelancerName || "Not specified")}
+      ${detailRow("Client", deal.clientName || "Not specified")}
+      ${detailRow("Work", deal.workDescription || "Not specified")}
+      ${detailRow("Amount", formatInr(deal.paymentAmount))}
+      ${detailRow("Deadline", formatDeadline(deal.deadline))}
+    </table>`;
+}
+
+function pageHtml({ title, intro, deal, url, buttonLabel }) {
+  return `
+    <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111827;max-width:640px;margin:0 auto;">
+      <h2 style="margin:0 0 8px;">${escapeHtml(title)}</h2>
+      <p style="margin:0 0 10px;">${escapeHtml(intro)}</p>
+      ${summaryTable(deal)}
+      ${buttonHtml(url, buttonLabel)}
+      <p style="font-size:13px;color:#6b7280;margin-top:18px;">
+        Or open this link: <a href="${escapeHtml(url)}">${escapeHtml(url)}</a>
+      </p>
+    </div>`;
+}
+
+function uniqueRecipients(emails) {
+  return [...new Set(emails.filter(Boolean).map((email) => String(email).trim()).filter(Boolean))];
+}
+
+async function sendEmail({ to, subject, html }) {
+  const recipients = Array.isArray(to) ? uniqueRecipients(to) : uniqueRecipients([to]);
+
+  if (recipients.length === 0) {
+    return false;
+  }
+
+  const gmail = getGmailConfig();
+  const transporter = createTransporter(gmail);
+
+  await transporter.sendMail({
+    from: `"Freebie" <${gmail.user}>`,
+    to: recipients.join(","),
+    subject,
+    html,
+  });
+
+  return true;
+}
+
+exports.onDealCreated = functions.firestore
+  .document("deals/{dealId}")
+  .onCreate(async (snapshot, context) => {
     const deal = snapshot.data();
+    const dealId = context.params.dealId;
+
     if (!deal.clientEmail) {
-      logger.warn("Deal created without clientEmail.", { dealId: event.params.dealId });
+      logger.warn("Deal created without clientEmail.", { dealId });
       return;
     }
 
-    const dealUrl = `${appBaseUrl}/deal.html?id=${event.params.dealId}`;
     const freelancerName = deal.freelancerName || "Your freelancer";
-    const transporter = createTransporter();
+    const url = dealLink(dealId);
 
-    await transporter.sendMail({
-      from: `"Freebie" <${gmailEmail.value()}>`,
+    await sendEmail({
       to: deal.clientEmail,
-      subject: `[Freebie] ${freelancerName} has shared a deal with you`,
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1a1a1a;max-width:640px;margin:0 auto;">
-          <h2 style="margin-bottom:8px;">${escapeHtml(freelancerName)} has shared a deal with you</h2>
-          <p>Please review the details below and confirm when you are ready.</p>
-          <table style="width:100%;border-collapse:collapse;margin-top:18px;">
-            <tr>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;font-weight:700;">Freelancer</td>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;">${escapeHtml(freelancerName)}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;font-weight:700;">Work</td>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;">${escapeHtml(deal.workDescription || "Not specified")}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;font-weight:700;">Payment</td>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;">${escapeHtml(formatInr(deal.paymentAmount))}</td>
-            </tr>
-            <tr>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;font-weight:700;">Deadline</td>
-              <td style="padding:10px;border-bottom:1px solid #eeeeee;">${escapeHtml(formatDeadline(deal.deadline))}</td>
-            </tr>
-          </table>
-          ${buttonHtml(dealUrl, "View & Agree to Deal")}
-        </div>
-      `,
+      subject: `[Freebie] ${freelancerName} sent you a deal`,
+      html: pageHtml({
+        title: `${freelancerName} sent you a deal`,
+        intro: "Review the deal details below and confirm when you are ready.",
+        deal,
+        url,
+        buttonLabel: "View Deal",
+      }),
     });
 
     logger.info("Deal created email sent.", {
-      dealId: event.params.dealId,
+      dealId,
       clientEmail: deal.clientEmail,
     });
-  }
-);
+  });
 
-exports.onDealAgreed = onDocumentUpdated(
-  {
-    document: "deals/{dealId}",
-    secrets: [gmailEmail, gmailAppPassword],
-  },
-  async (event) => {
-    if (!event.data) {
-      logger.warn("onDealAgreed fired without change data.");
+exports.onDealAgreed = functions.firestore
+  .document("deals/{dealId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const dealId = context.params.dealId;
+
+    const wasFullyAgreed = Boolean(before.clientAgreed && before.freelancerAgreed);
+    const isFullyAgreed = Boolean(after.clientAgreed && after.freelancerAgreed);
+
+    if (wasFullyAgreed || !isFullyAgreed) {
       return;
     }
 
-    const before = event.data.before.data();
-    const after = event.data.after.data();
-    const wasAgreed = Boolean(before.clientAgreed && before.freelancerAgreed);
-    const isAgreed = Boolean(after.clientAgreed && after.freelancerAgreed);
+    const recipients = uniqueRecipients([after.freelancerEmail, after.clientEmail]);
 
-    if (wasAgreed || !isAgreed) {
-      return;
-    }
-
-    const recipients = [after.freelancerEmail, after.clientEmail].filter(Boolean);
     if (recipients.length === 0) {
-      logger.warn("Deal agreed without email recipients.", { dealId: event.params.dealId });
+      logger.warn("Deal agreed without email recipients.", { dealId });
       return;
     }
 
-    const dealUrl = `${appBaseUrl}/deal.html?id=${event.params.dealId}`;
-    const transporter = createTransporter();
+    const url = dealLink(dealId);
 
-    await transporter.sendMail({
-      from: `"Freebie" <${gmailEmail.value()}>`,
-      to: recipients.join(","),
-      subject: "[Freebie] Your deal is now active",
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#1a1a1a;max-width:640px;margin:0 auto;">
-          <h2 style="margin-bottom:8px;">Your deal is now active</h2>
-          <p>Both ${escapeHtml(after.freelancerName || "the freelancer")} and ${escapeHtml(after.clientName || "the client")} have agreed to the deal.</p>
-          <p><strong>Work:</strong> ${escapeHtml(after.workDescription || "Not specified")}</p>
-          <p><strong>Payment:</strong> ${escapeHtml(formatInr(after.paymentAmount))}</p>
-          <p><strong>Deadline:</strong> ${escapeHtml(formatDeadline(after.deadline))}</p>
-          ${buttonHtml(dealUrl, "View Deal")}
-        </div>
-      `,
+    await sendEmail({
+      to: recipients,
+      subject: "[Freebie] Deal confirmed ✅",
+      html: pageHtml({
+        title: "Deal confirmed",
+        intro: "Both parties have agreed to the deal. Here is the confirmed summary.",
+        deal: after,
+        url,
+        buttonLabel: "View Confirmed Deal",
+      }),
     });
 
     logger.info("Deal agreed confirmation email sent.", {
-      dealId: event.params.dealId,
+      dealId,
       recipients,
     });
-  }
-);
+  });
+
+exports.onDealDisputed = functions.firestore
+  .document("deals/{dealId}")
+  .onUpdate(async (change, context) => {
+    const before = change.before.data();
+    const after = change.after.data();
+    const dealId = context.params.dealId;
+
+    if (before.status === "disputed" || after.status !== "disputed") {
+      return;
+    }
+
+    const recipients = uniqueRecipients([after.freelancerEmail, after.clientEmail]);
+
+    if (recipients.length === 0) {
+      logger.warn("Deal disputed without email recipients.", { dealId });
+      return;
+    }
+
+    const url = dealLink(dealId);
+
+    await sendEmail({
+      to: recipients,
+      subject: "[Freebie] ⚠️ Dispute raised on your deal",
+      html: pageHtml({
+        title: "Dispute raised on your deal",
+        intro: "A dispute has been raised on this deal. Review the details and next steps in Freebie.",
+        deal: after,
+        url,
+        buttonLabel: "View Disputed Deal",
+      }),
+    });
+
+    logger.info("Deal disputed email sent.", {
+      dealId,
+      recipients,
+    });
+  });

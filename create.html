@@ -5,12 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create a Deal - Freebie</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .char-counter {
+      font-size: 12px;
+      color: #999;
+      text-align: right;
+      margin-top: 4px;
+    }
+    .char-counter.warn { color: #c0392b; }
+  </style>
 </head>
 <body>
   <nav class="navbar">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
+      <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
   </nav>
 
@@ -24,30 +34,40 @@
         <label for="clientName">Client Name</label>
         <input type="text" id="clientName" placeholder="e.g. Priya Mehta" required />
       </div>
+
       <div class="form-group">
         <label for="clientEmail">Client Email</label>
         <input type="email" id="clientEmail" placeholder="client@example.com" required />
       </div>
+
       <div class="form-group">
         <label for="workDescription">Work Description</label>
-        <textarea id="workDescription" rows="5" placeholder="Describe the work clearly for both sides." required></textarea>
+        <textarea id="workDescription" rows="5"
+          placeholder="Describe the work clearly for both sides."
+          maxlength="1000" required></textarea>
+        <p class="char-counter" id="charCounter">0 / 1000</p>
       </div>
+
       <div class="form-group">
-        <label for="paymentAmount">Payment Amount</label>
-        <input type="number" id="paymentAmount" placeholder="e.g. 5000" min="0" step="1" required />
+        <label for="paymentAmount">Payment Amount (₹)</label>
+        <input type="number" id="paymentAmount" placeholder="e.g. 5000" min="1" step="1" required />
       </div>
+
       <div class="form-group">
         <label for="deadline">Deadline</label>
         <input type="date" id="deadline" required />
       </div>
+
       <p id="formError" class="hidden" style="color:#c0392b; margin-bottom:16px;"></p>
       <button type="submit" class="btn" id="submitBtn">Create Deal</button>
     </form>
 
     <div id="successBox" class="success-box hidden">
-      <p><strong>Deal created!</strong></p>
+      <p><strong>🎉 Deal created!</strong></p>
       <p style="margin-top:8px;">Share this link with your client:</p>
-      <p style="margin-top:8px;"><a id="dealLink" href="#" target="_blank" rel="noopener noreferrer"></a></p>
+      <p style="margin-top:8px; word-break:break-all;">
+        <a id="dealLink" href="#" target="_blank" rel="noopener noreferrer"></a>
+      </p>
       <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
         <button type="button" class="btn btn-outline" id="copyLinkBtn">Copy Link</button>
         <button type="button" class="btn btn-whatsapp" id="shareWhatsAppBtn">Share on WhatsApp</button>
@@ -59,7 +79,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -85,17 +105,34 @@
     const successBox = document.getElementById('successBox');
     const dealLink = document.getElementById('dealLink');
     const copySuccessMsg = document.getElementById('copySuccessMsg');
+    const charCounter = document.getElementById('charCounter');
+    const workDesc = document.getElementById('workDescription');
+
+    // Character counter
+    workDesc.addEventListener('input', () => {
+      const len = workDesc.value.length;
+      charCounter.textContent = `${len} / 1000`;
+      charCounter.classList.toggle('warn', len > 900);
+    });
+
+    // Set min date to today
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('deadline').setAttribute('min', todayStr);
 
     function showError(msg) {
       formError.textContent = msg;
       formError.classList.remove('hidden');
     }
 
+    function clearError() {
+      formError.textContent = '';
+      formError.classList.add('hidden');
+    }
+
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
 
-      const nameEl = document.getElementById('navUserName');
-      if (nameEl) nameEl.textContent = user.displayName || user.email;
+      document.getElementById('navUserName').textContent = user.displayName || user.email;
 
       const userSnap = await getDoc(doc(db, 'users', user.uid));
       if (!userSnap.exists()) { showError('Profile not found.'); submitBtn.disabled = true; return; }
@@ -109,19 +146,41 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      formError.classList.add('hidden');
+      clearError();
+
       if (!currentUser || !freelancerProfile) { showError('Still loading. Try again.'); return; }
 
+      const clientName = document.getElementById('clientName').value.trim();
+      const clientEmail = document.getElementById('clientEmail').value.trim().toLowerCase();
+      const workDescription = workDesc.value.trim();
+      const paymentAmount = Number(document.getElementById('paymentAmount').value);
+      const deadline = document.getElementById('deadline').value;
+
+      // Validations
+      if (!clientName) { showError('Enter client name.'); return; }
+      if (!clientEmail) { showError('Enter client email.'); return; }
+      if (clientEmail === currentUser.email) { showError("Client email can't be your own email."); return; }
+      if (!workDescription) { showError('Enter work description.'); return; }
+      if (paymentAmount <= 0) { showError('Enter a valid payment amount.'); return; }
+      if (!deadline) { showError('Select a deadline.'); return; }
+
+      // Confirm before submit
+      const confirmed = confirm(
+        `Creating deal with:\n\nClient: ${clientName}\nWork: ${workDescription.substring(0, 80)}...\nAmount: ₹${paymentAmount.toLocaleString('en-IN')}\nDeadline: ${deadline}\n\nProceed?`
+      );
+      if (!confirmed) return;
+
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Saving...';
+      submitBtn.textContent = 'Creating...';
 
       const dealData = {
-        clientName: document.getElementById('clientName').value.trim(),
-        clientEmail: document.getElementById('clientEmail').value.trim().toLowerCase(),
-        workDescription: document.getElementById('workDescription').value.trim(),
-        paymentAmount: Number(document.getElementById('paymentAmount').value),
-        deadline: document.getElementById('deadline').value,
+        clientName,
+        clientEmail,
+        workDescription,
+        paymentAmount,
+        deadline,
         status: 'pending',
+        paymentStatus: 'unpaid',
         clientAgreed: false,
         freelancerAgreed: false,
         createdAt: new Date().toISOString(),
@@ -155,6 +214,11 @@
       if (!createdDealUrl) return;
       const msg = `Hi! Please review and agree to our deal: ${createdDealUrl}`;
       window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    });
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
     });
   </script>
 </body>
