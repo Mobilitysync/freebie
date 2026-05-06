@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Freelancer Dashboard – Freebie</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 999;
+        }
+        .toast.show { opacity: 1; }
+
+        .stats-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat-pill {
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            background: #f0f0f0;
+            color: #444;
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .filter-btn {
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid #ddd;
+            background: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #1a1a1a; }
+        .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:focus { border-color: #1a1a1a; }
+
+        .pay-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .pay-unpaid  { background: #fff3cd; color: #856404; }
+        .pay-partial { background: #ffe0b2; color: #a05c00; }
+        .pay-paid    { background: #d1e7dd; color: #0a3622; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">Freebie</a>
+        <div class="nav-right">
+            <span id="navUserName"></span>
+            <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>My Deals</h1>
+            <div class="dashboard-actions">
+                <a href="create.html" class="btn">+ New Deal</a>
+            </div>
+        </div>
+
+        <div class="stats-bar" id="statsBar"></div>
+
+        <input type="text" class="search-box" id="searchInput" placeholder="Search by client name or work description..." />
+
+        <div class="filter-row" id="filterRow"></div>
+
+        <div id="dealsList">
+            <p class="loading-msg">Loading your deals...</p>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+            authDomain: "freebie-5762a.firebaseapp.com",
+            projectId: "freebie-5762a",
+            storageBucket: "freebie-5762a.firebasestorage.app",
+            messagingSenderId: "621180509813",
+            appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let allDeals = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+
+        const PAYMENT_LABELS = {
+            unpaid:  { label: '❌ Unpaid',   cls: 'pay-unpaid'  },
+            partial: { label: '🔶 Partial',  cls: 'pay-partial' },
+            paid:    { label: '✅ Paid',     cls: 'pay-paid'    }
+        };
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'No deadline';
+            return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+        function safeText(str, limit = 60) {
+            if (!str) return 'Untitled work';
+            return str.length > limit ? str.substring(0, limit) + '...' : str;
+        }
+
+        function getDealURL(id) {
+            return `${window.location.origin}/deal.html?id=${id}`;
+        }
+
+        function renderStats() {
+            const statuses = ['pending', 'agreed', 'completed', 'disputed', 'expired'];
+            const counts = { total: allDeals.length };
+            statuses.forEach(s => counts[s] = allDeals.filter(d => d.data.status === s).length);
+
+            const colors = {
+                total: '#1a1a1a', pending: '#856404', agreed: '#0a3622',
+                completed: '#004085', disputed: '#721c24', expired: '#555'
+            };
+
+            document.getElementById('statsBar').innerHTML = Object.entries(counts).map(([key, val]) => `
+                <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
+                    ${val} ${key}
+                </span>
+            `).join('');
+        }
+
+        function renderFilters() {
+            const filters = ['all', 'pending', 'agreed', 'completed', 'disputed', 'expired'];
+            document.getElementById('filterRow').innerHTML = filters.map(f => `
+                <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">
+                    ${f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    currentFilter = btn.dataset.filter;
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderDeals();
+                });
+            });
+        }
+
+        function renderDeals() {
+            const dealsList = document.getElementById('dealsList');
+            const filtered = allDeals
+                .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
+                .filter(({ data: d }) => {
+                    if (!currentSearch) return true;
+                    const q = currentSearch.toLowerCase();
+                    return (d.clientName || '').toLowerCase().includes(q) ||
+                           (d.workDescription || '').toLowerCase().includes(q);
+                });
+
+            if (filtered.length === 0) {
+                dealsList.innerHTML = `<div class="empty-state"><p>No deals match your filter.</p></div>`;
+                return;
+            }
+
+            const statusClass = (s) => ({
+                agreed: 'status-agreed', expired: 'status-expired',
+                completed: 'status-completed', disputed: 'status-disputed'
+            }[s] || 'status-pending');
+
+            dealsList.innerHTML = filtered.map(({ id, data: d }) => {
+                const ps = d.paymentStatus || 'unpaid';
+                const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
+                return `
+                <div class="deal-card">
+                    <div class="deal-card-top">
+                        <div>
+                            <h3>${safeText(d.workDescription)}</h3>
+                            <p class="deal-meta">
+                                Client: ${d.clientName || 'Unknown'}
+                                &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
+                                &nbsp;|&nbsp; Due: ${formatDate(d.deadline)}
+                            </p>
+                            <span class="pay-pill ${pay.cls}" style="margin-top:6px; display:inline-block;">
+                                ${pay.label}
+                            </span>
+                        </div>
+                        <span class="status-badge ${statusClass(d.status)}">${d.status}</span>
+                    </div>
+                    <div class="deal-card-actions">
+                        <a href="deal.html?id=${id}" class="btn btn-outline btn-sm">View Deal</a>
+                        <button class="btn btn-sm" data-copy="${id}">Copy Link</button>
+                        <button class="btn btn-whatsapp btn-sm" data-whatsapp="${id}">WhatsApp</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            dealsList.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('[data-copy]');
+                const waBtn = e.target.closest('[data-whatsapp]');
+                if (copyBtn) {
+                    navigator.clipboard.writeText(getDealURL(copyBtn.dataset.copy));
+                    showToast('Link copied!');
+                }
+                if (waBtn) {
+                    const url = getDealURL(waBtn.dataset.whatsapp);
+                    window.open(`https://wa.me/?text=${encodeURIComponent(`Hi! Review our deal: ${url}`)}`, '_blank');
+                }
+            }, { once: true });
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists() && userDoc.data().role === 'client') {
+                window.location.href = 'client-dashboard.html'; return;
+            }
+
+            document.getElementById('navUserName').textContent = user.displayName || user.email;
+
+            const q = query(collection(db, 'deals'), where('freelancerEmail', '==', user.email));
+            const snapshot = await getDocs(q);
+
+            allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+
+            // Auto-expire past-deadline pending deals
+            await Promise.all(allDeals.map(async ({ id, data: d }) => {
+                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
+                    await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+                    d.status = 'expired';
+                }
+                // Set default paymentStatus if missing
+                if (!d.paymentStatus) {
+                    await updateDoc(doc(db, 'deals', id), { paymentStatus: 'unpaid' });
+                    d.paymentStatus = 'unpaid';
+                }
+            }));
+
+            if (allDeals.length === 0) {
+                document.getElementById('dealsList').innerHTML = `
+                    <div class="empty-state">
+                        <p>No deals yet.</p>
+                        <a href="create.html" class="btn">Create your first deal</a>
+                    </div>`;
+                return;
+            }
+
+            renderStats();
+            renderFilters();
+            renderDeals();
+
+            document.getElementById('searchInput').addEventListener('input', (e) => {
+                currentSearch = e.target.value.trim();
+                renderDeals();
+            });
+        });
+
+        document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+            await signOut(auth);
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>
