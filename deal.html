@@ -7,16 +7,61 @@
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    .payment-update-box {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f7f6f2;
+      border-radius: 10px;
+      border: 1px solid #e0ddd8;
+    }
+    .payment-update-box h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #28251d;
+    }
+    .payment-select-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .payment-select-row select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .payment-select-row select:focus {
+      outline: none;
+      border-color: #01696f;
+    }
+    .pay-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pay-unpaid { background: #fff3cd; color: #856404; }
+    .pay-partial { background: #ffe0b2; color: #a05c00; }
+    .pay-paid    { background: #d1e7dd; color: #0a3622; }
+  </style>
 </head>
 <body>
   <nav class="navbar">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
+      <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
   </nav>
 
   <div class="container">
+    <a href="#" id="backLink" class="back-link">&larr; Back to Dashboard</a>
+
     <div id="loadingState">
       <p>Loading deal...</p>
     </div>
@@ -64,6 +109,20 @@
         </div>
       </div>
 
+      <!-- Payment Status Update — freelancer only, shown after deal is active -->
+      <div id="paymentUpdateBox" class="payment-update-box hidden">
+        <h3>Update Payment Status</h3>
+        <div class="payment-select-row">
+          <select id="paymentStatusSelect">
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
+          <button class="btn" id="updatePaymentBtn">Update</button>
+        </div>
+        <p id="paymentUpdateMsg" class="hidden" style="margin-top:10px; color:green; font-size:13px;"></p>
+      </div>
+
       <!-- Agreement section -->
       <div id="agreementSection" class="hidden" style="margin-top:24px;">
         <p id="agreementMsg" style="margin-bottom:16px; color:#555;"></p>
@@ -89,7 +148,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -130,6 +189,16 @@
       el.classList.remove('hidden');
     }
 
+    function payPillHTML(status) {
+      const map = {
+        unpaid:  { cls: 'pay-unpaid',  label: 'Unpaid'  },
+        partial: { cls: 'pay-partial', label: 'Partial' },
+        paid:    { cls: 'pay-paid',    label: 'Paid'    }
+      };
+      const p = map[status] || map.unpaid;
+      return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
+    }
+
     // ─── PDF Generation ────────────────────────────────────────
     function downloadPDF(deal, id) {
       const { jsPDF } = window.jspdf;
@@ -138,7 +207,6 @@
       const margin = 20;
       const contentW = pageW - margin * 2;
 
-      // Header
       pdf.setFillColor(1, 105, 111);
       pdf.rect(0, 0, pageW, 38, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -156,7 +224,6 @@
 
       let y = 52;
 
-      // Status badge
       const statusColor = (deal.status === 'active' || deal.status === 'completed') ? [39, 174, 96] : [231, 76, 60];
       pdf.setFillColor(...statusColor);
       pdf.roundedRect(margin, y - 5, 36, 8, 2, 2, 'F');
@@ -166,7 +233,6 @@
       pdf.text(deal.status.toUpperCase(), margin + 18, y, { align: 'center' });
       y += 12;
 
-      // Deal Summary
       pdf.setTextColor(40, 37, 29);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(13);
@@ -200,7 +266,6 @@
       row('Created Date', formatDate(deal.createdAt ? deal.createdAt.split('T')[0] : ''));
       y += 2;
 
-      // Work description
       pdf.setTextColor(122, 121, 116);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8.5);
@@ -226,7 +291,6 @@
       pdf.line(margin, y, pageW - margin, y);
       y += 8;
 
-      // Agreement Status
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(40, 37, 29);
@@ -246,7 +310,6 @@
       agreeBadge('Client', deal.clientAgreed, margin + 76);
       y += 14;
 
-      // Footer
       const footerY = pdf.internal.pageSize.getHeight() - 18;
       pdf.setDrawColor(212, 209, 202);
       pdf.line(margin, footerY - 4, pageW - margin, footerY - 4);
@@ -264,8 +327,7 @@
       currentUser = user;
 
       if (user) {
-        const nameEl = document.getElementById('navUserName');
-        if (nameEl) nameEl.textContent = user.displayName || user.email;
+        document.getElementById('navUserName').textContent = user.displayName || user.email;
       }
 
       if (!dealId) {
@@ -289,6 +351,16 @@
     function renderDeal(d) {
       document.getElementById('dealContent').classList.remove('hidden');
 
+      // Set back link based on role
+      if (currentUser) {
+        const userEmail = currentUser.email.toLowerCase();
+        if (userEmail === d.freelancerEmail.toLowerCase()) {
+          document.getElementById('backLink').href = 'freelancer-dashboard.html';
+        } else if (userEmail === d.clientEmail.toLowerCase()) {
+          document.getElementById('backLink').href = 'client-dashboard.html';
+        }
+      }
+
       const tagline = document.getElementById('dealStatusTagline');
       if (d.status === 'active' || d.status === 'completed') {
         tagline.textContent = '✅ This deal is active — both parties have agreed.';
@@ -303,12 +375,49 @@
       document.getElementById('dWorkDescription').textContent = d.workDescription;
       document.getElementById('dPaymentAmount').textContent = formatCurrency(d.paymentAmount);
       document.getElementById('dDeadline').textContent = formatDate(d.deadline);
-      document.getElementById('dPaymentStatus').textContent = (d.paymentStatus || 'unpaid').charAt(0).toUpperCase() + (d.paymentStatus || 'unpaid').slice(1);
+      document.getElementById('dPaymentStatus').innerHTML = payPillHTML(d.paymentStatus || 'unpaid');
       document.getElementById('dStatus').textContent = d.status.charAt(0).toUpperCase() + d.status.slice(1);
       document.getElementById('dFreelancerAgreed').textContent = d.freelancerAgreed ? '✅ Yes' : '⏳ Pending';
       document.getElementById('dClientAgreed').textContent = d.clientAgreed ? '✅ Yes' : '⏳ Pending';
 
-      // Both agreed — show PDF button
+      // Show payment update box — freelancer only, active/completed deals
+      if (currentUser) {
+        const userEmail = currentUser.email.toLowerCase();
+        const isFreelancer = userEmail === d.freelancerEmail.toLowerCase();
+        const isActive = d.status === 'active' || d.status === 'completed';
+
+        if (isFreelancer && isActive) {
+          const box = document.getElementById('paymentUpdateBox');
+          box.classList.remove('hidden');
+          const sel = document.getElementById('paymentStatusSelect');
+          sel.value = d.paymentStatus || 'unpaid';
+
+          document.getElementById('updatePaymentBtn').addEventListener('click', async () => {
+            const newStatus = sel.value;
+            const updateBtn = document.getElementById('updatePaymentBtn');
+            updateBtn.disabled = true;
+            updateBtn.textContent = 'Saving...';
+
+            try {
+              await updateDoc(doc(db, 'deals', dealId), { paymentStatus: newStatus });
+              dealData.paymentStatus = newStatus;
+              document.getElementById('dPaymentStatus').innerHTML = payPillHTML(newStatus);
+              const msg = document.getElementById('paymentUpdateMsg');
+              msg.textContent = '✅ Payment status updated!';
+              msg.classList.remove('hidden');
+              setTimeout(() => msg.classList.add('hidden'), 3000);
+            } catch (err) {
+              console.error(err);
+              showDealError('Failed to update payment status.');
+            }
+
+            updateBtn.disabled = false;
+            updateBtn.textContent = 'Update';
+          });
+        }
+      }
+
+      // Both agreed
       if (d.freelancerAgreed && d.clientAgreed) {
         document.getElementById('fullyAgreedBox').classList.remove('hidden');
         document.getElementById('downloadPdfBtn').addEventListener('click', () => downloadPDF(d, dealId));
@@ -386,6 +495,11 @@
         }
       });
     }
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
   </script>
 </body>
 </html>
