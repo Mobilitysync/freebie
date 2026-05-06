@@ -3,73 +3,367 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Freebie - Deal Tracker</title>
+  <title>Freebie — Deal Agreements for Freelancers</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    #roleSection {
-      opacity: 0;
-      transition: opacity 0.3s ease;
+    /* Landing-specific styles */
+    .hero {
+      text-align: center;
+      padding: 80px 24px 64px;
+      max-width: 640px;
+      margin: 0 auto;
     }
-    #roleSection.visible {
-      opacity: 1;
+    .hero-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: #cedcd8;
+      color: #01696f;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
     }
-    .loading-screen {
-      position: fixed;
-      inset: 0;
-      background: #f5f5f5;
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      line-height: 1.15;
+      color: #28251d;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: #01696f; }
+    .hero p {
+      font-size: 17px;
+      color: #666;
+      line-height: 1.7;
+      margin-bottom: 32px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .how-it-works {
+      background: #f7f6f2;
+      border-top: 1px solid #e8e5e0;
+      padding: 64px 24px;
+    }
+    .how-it-works h2 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 40px;
+      color: #28251d;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+      max-width: 840px;
+      margin: 0 auto;
+    }
+    .step-card {
+      background: #fff;
+      border: 1px solid #e0ddd8;
+      border-radius: 12px;
+      padding: 24px 20px;
+      text-align: left;
+    }
+    .step-number {
+      width: 32px; height: 32px;
+      background: #01696f;
+      color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .step-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      color: #28251d;
+      margin-bottom: 6px;
+    }
+    .step-card p {
+      font-size: 13px;
+      color: #888;
+      line-height: 1.6;
+    }
+    .auth-section {
+      padding: 64px 24px;
+      max-width: 440px;
+      margin: 0 auto;
+    }
+    .auth-card {
+      background: #fff;
+      border: 1px solid #e0ddd8;
+      border-radius: 14px;
+      padding: 32px 28px;
+    }
+    .auth-card h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #28251d;
+    }
+    .auth-card .auth-subtitle {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 24px;
+    }
+    .tab-row {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border: 1px solid #e0ddd8;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 9px 0;
+      font-size: 13px;
+      font-weight: 600;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+      color: #888;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #01696f;
+      color: #fff;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: #01696f; }
+    .role-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .role-option {
+      flex: 1;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      transition: all 0.2s;
+      user-select: none;
+    }
+    .role-option.selected {
+      border-color: #01696f;
+      background: #f0f7f4;
+      color: #01696f;
+    }
+    .role-option .role-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+    .auth-submit { width: 100%; padding: 12px; font-size: 15px; margin-top: 8px; }
+    .auth-error {
+      font-size: 13px;
+      color: #c0392b;
+      margin-top: 12px;
+      display: none;
+    }
+    .auth-divider {
+      text-align: center;
+      font-size: 12px;
+      color: #bbb;
+      margin: 16px 0;
+    }
+    .google-btn {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background: #fff;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 999;
-      transition: opacity 0.3s ease;
+      gap: 10px;
+      transition: border-color 0.2s, background 0.2s;
     }
-    .loading-screen.hidden {
-      opacity: 0;
-      pointer-events: none;
+    .google-btn:hover { border-color: #01696f; background: #f0f7f4; }
+    .forgot-link {
+      font-size: 12px;
+      color: #01696f;
+      text-decoration: none;
+      float: right;
+      margin-top: -20px;
+      margin-bottom: 16px;
+      display: block;
     }
+    .landing-footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 12px;
+      color: #bbb;
+      border-top: 1px solid #e8e5e0;
+    }
+    .landing-footer a { color: #01696f; text-decoration: none; }
   </style>
 </head>
 <body>
 
-  <div class="loading-screen" id="loadingScreen">
-    <p style="color:#999; font-size:15px;">Loading...</p>
-  </div>
-
+  <!-- Navbar -->
   <nav class="navbar">
     <a href="index.html" class="nav-brand">Freebie</a>
+    <div class="nav-right">
+      <a href="#auth" class="btn btn-sm btn-outline">Sign In</a>
+    </div>
   </nav>
 
-  <div class="container">
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">Free to use</div>
+    <h1>Create deal agreements.<br /><span>Get paid without disputes.</span></h1>
+    <p>Freebie lets freelancers create simple, shareable deal agreements that both parties sign digitally — with built-in payment tracking and PDF receipts.</p>
+    <div class="hero-actions">
+      <a href="#auth" class="btn">Get Started Free</a>
+      <a href="#how" class="btn btn-outline">How it works</a>
+    </div>
+  </section>
 
-    <h1>Freebie</h1>
-    <p class="tagline">Create a deal. Share the link. Track it together.</p>
-
-    <div id="roleSection">
-      <div class="role-cards">
-
-        <div class="role-card">
-          <div class="role-icon">💼</div>
-          <h2>I'm a Freelancer</h2>
-          <p>Create deals, share links with clients, and track agreements.</p>
-          <a href="login-freelancer.html" class="btn">Login as Freelancer</a>
-        </div>
-
-        <div class="role-card">
-          <div class="role-icon">🤝</div>
-          <h2>I'm a Client</h2>
-          <p>View deals shared with you, review terms, and agree.</p>
-          <a href="login-client.html" class="btn btn-outline">Login as Client</a>
-        </div>
-
+  <!-- How it works -->
+  <section class="how-it-works" id="how">
+    <h2>How it works</h2>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-number">1</div>
+        <h3>Create a deal</h3>
+        <p>Enter the work description, amount, and deadline. Takes 30 seconds.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">2</div>
+        <h3>Share the link</h3>
+        <p>Send your client a link via WhatsApp or email. They review the terms.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">3</div>
+        <h3>Both parties agree</h3>
+        <p>Your client clicks agree. The deal is locked in. Both get a PDF receipt.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-number">4</div>
+        <h3>Track payment</h3>
+        <p>Mark payment as unpaid, partial, or paid as work progresses.</p>
       </div>
     </div>
+  </section>
 
-  </div>
+  <!-- Auth -->
+  <section class="auth-section" id="auth">
+    <div class="auth-card">
+      <h2 id="authTitle">Welcome back</h2>
+      <p class="auth-subtitle" id="authSubtitle">Sign in to your account</p>
+
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabSignin" data-tab="signin">Sign In</button>
+        <button class="tab-btn" id="tabSignup" data-tab="signup">Sign Up</button>
+      </div>
+
+      <!-- Sign In -->
+      <div id="panelSignin">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="siEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="siPassword" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <a href="#" class="forgot-link" id="forgotLink">Forgot password?</a>
+        <button class="btn auth-submit" id="signinBtn">Sign In</button>
+        <div class="auth-divider">or</div>
+        <button class="google-btn" id="googleSigninBtn">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <p class="auth-error" id="siError"></p>
+      </div>
+
+      <!-- Sign Up -->
+      <div id="panelSignup" style="display:none">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="suName" placeholder="Your full name" autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="suEmail" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
+        </div>
+        <div class="form-group">
+          <label>I am a</label>
+          <div class="role-row">
+            <div class="role-option selected" data-role="freelancer" id="roleFreelancer">
+              <span class="role-icon">💼</span>Freelancer
+            </div>
+            <div class="role-option" data-role="client" id="roleClient">
+              <span class="role-icon">🏢</span>Client
+            </div>
+          </div>
+        </div>
+        <button class="btn auth-submit" id="signupBtn">Create Account</button>
+        <div class="auth-divider">or</div>
+        <button class="google-btn" id="googleSignupBtn">
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.35-8.16 2.35-6.26 0-11.57-3.59-13.46-8.83l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
+        </button>
+        <p class="auth-error" id="suError"></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    © 2026 Freebie &nbsp;·&nbsp; Built for Indian freelancers &nbsp;·&nbsp;
+    <a href="admin.html">Admin</a>
+  </footer>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getAuth, onAuthStateChanged,
+      signInWithEmailAndPassword, createUserWithEmailAndPassword,
+      updateProfile, sendPasswordResetEmail,
+      GoogleAuthProvider, signInWithPopup
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -83,32 +377,162 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const googleProvider = new GoogleAuthProvider();
 
-    const loadingScreen = document.getElementById('loadingScreen');
-    const roleSection = document.getElementById('roleSection');
+    const $ = id => document.getElementById(id);
 
+    // ─── Redirect if already logged in ───────────────────────
     onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const snap = await getDoc(doc(db, 'users', user.uid));
-          if (snap.exists()) {
-            const role = snap.data().role;
-            const redirect = sessionStorage.getItem('redirectAfterLogin');
-            sessionStorage.removeItem('redirectAfterLogin');
-            if (redirect) { window.location.href = redirect; return; }
-            if (role === 'freelancer') { window.location.href = 'freelancer-dashboard.html'; return; }
-            if (role === 'client') { window.location.href = 'client-dashboard.html'; return; }
-          }
-        } catch (err) {
-          console.error('Auth check failed:', err);
-        }
-      }
+      if (!user) return;
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const role = userDoc.exists() ? userDoc.data().role : 'freelancer';
+      window.location.href = role === 'client' ? 'client-dashboard.html' : 'freelancer-dashboard.html';
+    });
 
-      // No user or no role found — show role cards
-      loadingScreen.classList.add('hidden');
-      roleSection.classList.add('visible');
+    // ─── Tabs ─────────────────────────────────────────────────
+    let selectedRole = 'freelancer';
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        $('panelSignin').style.display = tab === 'signin' ? 'block' : 'none';
+        $('panelSignup').style.display = tab === 'signup' ? 'block' : 'none';
+        $('authTitle').textContent    = tab === 'signin' ? 'Welcome back' : 'Create account';
+        $('authSubtitle').textContent = tab === 'signin' ? 'Sign in to your account' : 'Free forever. No credit card needed.';
+      });
+    });
+
+    // ─── Role selector ────────────────────────────────────────
+    document.querySelectorAll('.role-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+        opt.classList.add('selected');
+        selectedRole = opt.dataset.role;
+      });
+    });
+
+    // ─── Helpers ──────────────────────────────────────────────
+    function showError(id, msg) {
+      const el = $(id);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+    function clearErrors() {
+      ['siError','suError'].forEach(id => { $(id).style.display = 'none'; });
+    }
+
+    function friendlyError(code) {
+      const map = {
+        'auth/user-not-found':      'No account found with this email.',
+        'auth/wrong-password':      'Incorrect password.',
+        'auth/invalid-credential':  'Incorrect email or password.',
+        'auth/email-already-in-use':'An account with this email already exists.',
+        'auth/weak-password':       'Password must be at least 6 characters.',
+        'auth/invalid-email':       'Please enter a valid email address.',
+        'auth/too-many-requests':   'Too many attempts. Try again in a few minutes.',
+        'auth/popup-closed-by-user':'Google sign-in was cancelled.'
+      };
+      return map[code] || 'Something went wrong. Please try again.';
+    }
+
+    async function redirectUser(user) {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const role = userDoc.exists() ? userDoc.data().role : 'freelancer';
+      window.location.href = role === 'client' ? 'client-dashboard.html' : 'freelancer-dashboard.html';
+    }
+
+    async function saveUser(user, role, name) {
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        displayName: name || user.displayName || '',
+        role: role,
+        createdAt: new Date().toISOString()
+      }, { merge: true });
+    }
+
+    // ─── Sign In ──────────────────────────────────────────────
+    $('signinBtn').addEventListener('click', async () => {
+      clearErrors();
+      const email = $('siEmail').value.trim();
+      const pass  = $('siPassword').value;
+      if (!email || !pass) { showError('siError', 'Please fill in both fields.'); return; }
+      $('signinBtn').disabled = true;
+      $('signinBtn').textContent = 'Signing in...';
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        // redirect handled by onAuthStateChanged
+      } catch (err) {
+        showError('siError', friendlyError(err.code));
+        $('signinBtn').disabled = false;
+        $('signinBtn').textContent = 'Sign In';
+      }
+    });
+
+    // ─── Sign Up ──────────────────────────────────────────────
+    $('signupBtn').addEventListener('click', async () => {
+      clearErrors();
+      const name  = $('suName').value.trim();
+      const email = $('suEmail').value.trim();
+      const pass  = $('suPassword').value;
+      if (!name)  { showError('suError', 'Please enter your name.'); return; }
+      if (!email) { showError('suError', 'Please enter your email.'); return; }
+      if (pass.length < 6) { showError('suError', 'Password must be at least 6 characters.'); return; }
+      $('signupBtn').disabled = true;
+      $('signupBtn').textContent = 'Creating account...';
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, pass);
+        await updateProfile(cred.user, { displayName: name });
+        await saveUser(cred.user, selectedRole, name);
+        // redirect handled by onAuthStateChanged
+      } catch (err) {
+        showError('suError', friendlyError(err.code));
+        $('signupBtn').disabled = false;
+        $('signupBtn').textContent = 'Create Account';
+      }
+    });
+
+    // ─── Google ───────────────────────────────────────────────
+    async function googleAuth() {
+      clearErrors();
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        const existing = await getDoc(doc(db, 'users', user.uid));
+        if (!existing.exists()) {
+          await saveUser(user, selectedRole, user.displayName);
+        }
+        // redirect handled by onAuthStateChanged
+      } catch (err) {
+        showError('siError', friendlyError(err.code));
+        showError('suError', friendlyError(err.code));
+      }
+    }
+    $('googleSigninBtn').addEventListener('click', googleAuth);
+    $('googleSignupBtn').addEventListener('click', googleAuth);
+
+    // ─── Forgot password ──────────────────────────────────────
+    $('forgotLink').addEventListener('click', async (e) => {
+      e.preventDefault();
+      const email = $('siEmail').value.trim();
+      if (!email) { showError('siError', 'Enter your email above first.'); return; }
+      try {
+        await sendPasswordResetEmail(auth, email);
+        showError('siError', '✅ Reset email sent. Check your inbox.');
+        $('siError').style.color = '#0a3622';
+      } catch (err) {
+        showError('siError', friendlyError(err.code));
+      }
+    });
+
+    // ─── Enter key support ────────────────────────────────────
+    ['siEmail','siPassword'].forEach(id => {
+      $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('signinBtn').click(); });
+    });
+    ['suName','suEmail','suPassword'].forEach(id => {
+      $(id).addEventListener('keydown', e => { if (e.key === 'Enter') $('signupBtn').click(); });
     });
   </script>
-
 </body>
 </html>
