@@ -38,6 +38,33 @@
       outline: none;
       border-color: #01696f;
     }
+    .complete-box {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f0f7f4;
+      border-radius: 10px;
+      border: 1px solid #c3ddd6;
+    }
+    .complete-box h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #28251d;
+    }
+    .complete-box p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+    .completed-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
     .pay-pill {
       display: inline-block;
       padding: 2px 10px;
@@ -45,7 +72,7 @@
       font-size: 11px;
       font-weight: 700;
     }
-    .pay-unpaid { background: #fff3cd; color: #856404; }
+    .pay-unpaid  { background: #fff3cd; color: #856404; }
     .pay-partial { background: #ffe0b2; color: #a05c00; }
     .pay-paid    { background: #d1e7dd; color: #0a3622; }
   </style>
@@ -62,9 +89,7 @@
   <div class="container">
     <a href="#" id="backLink" class="back-link">&larr; Back to Dashboard</a>
 
-    <div id="loadingState">
-      <p>Loading deal...</p>
-    </div>
+    <div id="loadingState"><p>Loading deal...</p></div>
 
     <div id="dealContent" class="hidden">
       <h1>Deal Details</h1>
@@ -109,7 +134,21 @@
         </div>
       </div>
 
-      <!-- Payment Status Update — freelancer only, shown after deal is active -->
+      <!-- Mark as Completed — freelancer only, active deals -->
+      <div id="completeBox" class="complete-box hidden">
+        <h3>Mark Deal as Completed</h3>
+        <p>Once you mark this as completed, both parties will see it as closed. Make sure the work has been delivered and payment is settled before doing this.</p>
+        <button class="btn" id="markCompleteBtn">✅ Mark as Completed</button>
+        <p id="completeMsg" class="hidden" style="margin-top:10px; color:green; font-size:13px;"></p>
+      </div>
+
+      <!-- Already completed notice -->
+      <div id="completedNotice" class="hidden" style="margin-top:24px; padding:16px 20px; background:#f0f4ff; border-radius:10px; border:1px solid #c8d4f0;">
+        <span class="completed-badge">✔ Deal Completed</span>
+        <p style="margin-top:10px; font-size:13px; color:#555;">This deal has been marked as completed by the freelancer.</p>
+      </div>
+
+      <!-- Payment Status Update — freelancer only, active or completed -->
       <div id="paymentUpdateBox" class="payment-update-box hidden">
         <h3>Update Payment Status</h3>
         <div class="payment-select-row">
@@ -133,7 +172,7 @@
       <div id="fullyAgreedBox" class="success-box hidden" style="margin-top:24px;">
         <p><strong>✅ Both parties have agreed!</strong></p>
         <p style="margin-top:8px; color:#555;">This deal is now active.</p>
-        <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap; align-items:center;">
+        <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
           <button type="button" class="btn" id="downloadPdfBtn">📄 Download PDF Receipt</button>
         </div>
       </div>
@@ -141,9 +180,7 @@
       <p id="dealError" class="hidden" style="color:#c0392b; margin-top:16px;"></p>
     </div>
 
-    <div id="notFound" class="hidden">
-      <p>Deal not found.</p>
-    </div>
+    <div id="notFound" class="hidden"><p>Deal not found.</p></div>
   </div>
 
   <script type="module">
@@ -163,7 +200,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
     emailjs.init("srtxybM1XCY_0Q07u");
 
     const params = new URLSearchParams(window.location.search);
@@ -172,6 +208,7 @@
     let currentUser = null;
     let dealData = null;
 
+    // ─── Helpers ───────────────────────────────────────────────
     function formatCurrency(amount) {
       return '₹' + Number(amount).toLocaleString('en-IN');
     }
@@ -199,7 +236,7 @@
       return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
     }
 
-    // ─── PDF Generation ────────────────────────────────────────
+    // ─── PDF ───────────────────────────────────────────────────
     function downloadPDF(deal, id) {
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -224,7 +261,7 @@
 
       let y = 52;
 
-      const statusColor = (deal.status === 'active' || deal.status === 'completed') ? [39, 174, 96] : [231, 76, 60];
+      const statusColor = ['active','completed'].includes(deal.status) ? [39,174,96] : [231,76,60];
       pdf.setFillColor(...statusColor);
       pdf.roundedRect(margin, y - 5, 36, 8, 2, 2, 'F');
       pdf.setTextColor(255, 255, 255);
@@ -285,8 +322,8 @@
       row('Payment Amount', formatCurrency(deal.paymentAmount), true);
       row('Payment Status', (deal.paymentStatus || 'unpaid').toUpperCase());
       row('Deal Status', deal.status.toUpperCase());
-
       y += 4;
+
       pdf.setDrawColor(212, 209, 202);
       pdf.line(margin, y, pageW - margin, y);
       y += 8;
@@ -298,14 +335,13 @@
       y += 8;
 
       function agreeBadge(label, agreed, x) {
-        pdf.setFillColor(...(agreed ? [39, 174, 96] : [189, 195, 199]));
+        pdf.setFillColor(...(agreed ? [39,174,96] : [189,195,199]));
         pdf.roundedRect(x, y - 5, 70, 10, 2, 2, 'F');
         pdf.setTextColor(255, 255, 255);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'bold');
         pdf.text(`${label}: ${agreed ? '✓ Agreed' : 'Pending'}`, x + 35, y, { align: 'center' });
       }
-
       agreeBadge('Freelancer', deal.freelancerAgreed, margin);
       agreeBadge('Client', deal.clientAgreed, margin + 76);
       y += 14;
@@ -318,17 +354,13 @@
       pdf.setFontSize(7.5);
       pdf.text('This is a system-generated receipt from Freebie. Please retain it for your records.', pageW / 2, footerY, { align: 'center' });
       pdf.text(`Generated by Freebie - freebie-5762a.web.app - ${genDate}`, pageW / 2, footerY + 5, { align: 'center' });
-
       pdf.save(`freebie-deal-${id.substring(0, 8)}.pdf`);
     }
 
     // ─── Auth & Load ──────────────────────────────────────────
     onAuthStateChanged(auth, async (user) => {
       currentUser = user;
-
-      if (user) {
-        document.getElementById('navUserName').textContent = user.displayName || user.email;
-      }
+      if (user) document.getElementById('navUserName').textContent = user.displayName || user.email;
 
       if (!dealId) {
         document.getElementById('loadingState').classList.add('hidden');
@@ -348,28 +380,36 @@
       renderDeal(dealData);
     });
 
+    // ─── Render ───────────────────────────────────────────────
     function renderDeal(d) {
       document.getElementById('dealContent').classList.remove('hidden');
 
-      // Set back link based on role
+      // Back link
       if (currentUser) {
-        const userEmail = currentUser.email.toLowerCase();
-        if (userEmail === d.freelancerEmail.toLowerCase()) {
+        const ue = currentUser.email.toLowerCase();
+        if (ue === d.freelancerEmail.toLowerCase())
           document.getElementById('backLink').href = 'freelancer-dashboard.html';
-        } else if (userEmail === d.clientEmail.toLowerCase()) {
+        else if (ue === d.clientEmail.toLowerCase())
           document.getElementById('backLink').href = 'client-dashboard.html';
-        }
       }
 
+      // Tagline
       const tagline = document.getElementById('dealStatusTagline');
-      if (d.status === 'active' || d.status === 'completed') {
+      if (d.status === 'completed') {
+        tagline.textContent = '✔ This deal has been completed.';
+        tagline.style.color = '#1a1a1a';
+      } else if (d.status === 'active') {
         tagline.textContent = '✅ This deal is active — both parties have agreed.';
         tagline.style.color = '#27ae60';
+      } else if (d.status === 'disputed') {
+        tagline.textContent = '⚠️ This deal is under dispute.';
+        tagline.style.color = '#c0392b';
       } else {
         tagline.textContent = '⏳ Waiting for both parties to agree.';
         tagline.style.color = '#e67e22';
       }
 
+      // Fields
       document.getElementById('dFreelancerName').textContent = d.freelancerName || d.freelancerEmail;
       document.getElementById('dClientName').textContent = d.clientName;
       document.getElementById('dWorkDescription').textContent = d.workDescription;
@@ -380,120 +420,145 @@
       document.getElementById('dFreelancerAgreed').textContent = d.freelancerAgreed ? '✅ Yes' : '⏳ Pending';
       document.getElementById('dClientAgreed').textContent = d.clientAgreed ? '✅ Yes' : '⏳ Pending';
 
-      // Show payment update box — freelancer only, active/completed deals
-      if (currentUser) {
-        const userEmail = currentUser.email.toLowerCase();
-        const isFreelancer = userEmail === d.freelancerEmail.toLowerCase();
-        const isActive = d.status === 'active' || d.status === 'completed';
+      const isFreelancer = currentUser && currentUser.email.toLowerCase() === d.freelancerEmail.toLowerCase();
+      const isClient = currentUser && currentUser.email.toLowerCase() === d.clientEmail.toLowerCase();
 
-        if (isFreelancer && isActive) {
-          const box = document.getElementById('paymentUpdateBox');
-          box.classList.remove('hidden');
-          const sel = document.getElementById('paymentStatusSelect');
-          sel.value = d.paymentStatus || 'unpaid';
+      // ── Mark as Completed (freelancer, active deals only) ──
+      if (isFreelancer && d.status === 'active') {
+        document.getElementById('completeBox').classList.remove('hidden');
+        document.getElementById('markCompleteBtn').addEventListener('click', async () => {
+          const confirmed = confirm('Mark this deal as completed? This means the work is done and both sides are settled.');
+          if (!confirmed) return;
 
-          document.getElementById('updatePaymentBtn').addEventListener('click', async () => {
-            const newStatus = sel.value;
-            const updateBtn = document.getElementById('updatePaymentBtn');
-            updateBtn.disabled = true;
-            updateBtn.textContent = 'Saving...';
+          const btn = document.getElementById('markCompleteBtn');
+          btn.disabled = true;
+          btn.textContent = 'Saving...';
 
-            try {
-              await updateDoc(doc(db, 'deals', dealId), { paymentStatus: newStatus });
-              dealData.paymentStatus = newStatus;
-              document.getElementById('dPaymentStatus').innerHTML = payPillHTML(newStatus);
-              const msg = document.getElementById('paymentUpdateMsg');
-              msg.textContent = '✅ Payment status updated!';
-              msg.classList.remove('hidden');
-              setTimeout(() => msg.classList.add('hidden'), 3000);
-            } catch (err) {
-              console.error(err);
-              showDealError('Failed to update payment status.');
-            }
-
-            updateBtn.disabled = false;
-            updateBtn.textContent = 'Update';
-          });
-        }
+          try {
+            await updateDoc(doc(db, 'deals', dealId), { status: 'completed' });
+            dealData.status = 'completed';
+            // Re-render fresh
+            document.getElementById('dealContent').classList.add('hidden');
+            document.getElementById('completeBox').classList.add('hidden');
+            renderDeal(dealData);
+          } catch (err) {
+            console.error(err);
+            showDealError('Failed to mark as completed. Try again.');
+            btn.disabled = false;
+            btn.textContent = '✅ Mark as Completed';
+          }
+        });
       }
 
-      // Both agreed
+      // ── Completed notice (everyone, completed deals) ──
+      if (d.status === 'completed') {
+        document.getElementById('completedNotice').classList.remove('hidden');
+      }
+
+      // ── Payment status update (freelancer, active or completed) ──
+      if (isFreelancer && (d.status === 'active' || d.status === 'completed')) {
+        const box = document.getElementById('paymentUpdateBox');
+        box.classList.remove('hidden');
+        document.getElementById('paymentStatusSelect').value = d.paymentStatus || 'unpaid';
+
+        document.getElementById('updatePaymentBtn').addEventListener('click', async () => {
+          const newStatus = document.getElementById('paymentStatusSelect').value;
+          const btn = document.getElementById('updatePaymentBtn');
+          btn.disabled = true;
+          btn.textContent = 'Saving...';
+          try {
+            await updateDoc(doc(db, 'deals', dealId), { paymentStatus: newStatus });
+            dealData.paymentStatus = newStatus;
+            document.getElementById('dPaymentStatus').innerHTML = payPillHTML(newStatus);
+            const msg = document.getElementById('paymentUpdateMsg');
+            msg.textContent = '✅ Payment status updated!';
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+          } catch (err) {
+            console.error(err);
+            showDealError('Failed to update payment status.');
+          }
+          btn.disabled = false;
+          btn.textContent = 'Update';
+        });
+      }
+
+      // ── PDF button (both agreed) ──
       if (d.freelancerAgreed && d.clientAgreed) {
         document.getElementById('fullyAgreedBox').classList.remove('hidden');
         document.getElementById('downloadPdfBtn').addEventListener('click', () => downloadPDF(d, dealId));
-        return;
+
+        // Don't show agreement buttons if already agreed
+        if (d.status !== 'pending') return;
       }
 
-      if (!currentUser) {
-        document.getElementById('agreementSection').classList.remove('hidden');
-        document.getElementById('agreementMsg').textContent = 'Log in to agree to this deal.';
-        document.getElementById('agreeBtn').disabled = true;
-        return;
-      }
-
-      const userEmail = currentUser.email.toLowerCase();
-      const isFreelancer = userEmail === d.freelancerEmail.toLowerCase();
-      const isClient = userEmail === d.clientEmail.toLowerCase();
-
-      if (!isFreelancer && !isClient) return;
-
-      const alreadyAgreed = (isFreelancer && d.freelancerAgreed) || (isClient && d.clientAgreed);
-
-      if (alreadyAgreed) {
-        document.getElementById('agreementSection').classList.remove('hidden');
-        document.getElementById('agreementMsg').textContent = "✅ You've already agreed. Waiting for the other party.";
-        document.getElementById('agreeBtn').classList.add('hidden');
-        return;
-      }
-
-      document.getElementById('agreementSection').classList.remove('hidden');
-      document.getElementById('agreementMsg').textContent = isFreelancer
-        ? 'As the freelancer, you can agree to this deal below.'
-        : 'As the client, please review and agree to this deal.';
-
-      document.getElementById('agreeBtn').addEventListener('click', async () => {
-        const confirmed = confirm('By clicking OK, you confirm you agree to all terms of this deal.');
-        if (!confirmed) return;
-
-        const agreeBtn = document.getElementById('agreeBtn');
-        agreeBtn.disabled = true;
-        agreeBtn.textContent = 'Saving...';
-
-        try {
-          const updateField = isFreelancer ? { freelancerAgreed: true } : { clientAgreed: true };
-          const otherAgreed = isFreelancer ? dealData.clientAgreed : dealData.freelancerAgreed;
-          if (otherAgreed) updateField.status = 'active';
-
-          await updateDoc(doc(db, 'deals', dealId), updateField);
-
-          // Email freelancer when client agrees
-          if (isClient) {
-            try {
-              await emailjs.send("service_li63q25", "template_5csdxp7", {
-                email: dealData.freelancerEmail,
-                freelancer_name: dealData.freelancerName,
-                client_name: dealData.clientName,
-                work_description: dealData.workDescription,
-                amount: Number(dealData.paymentAmount).toLocaleString('en-IN'),
-                deadline: formatDate(dealData.deadline),
-                deal_link: `${window.location.origin}/deal.html?id=${dealId}`
-              });
-            } catch (emailErr) {
-              console.warn('Freelancer email failed (non-blocking):', emailErr);
-            }
-          }
-
-          const refreshed = await getDoc(doc(db, 'deals', dealId));
-          dealData = refreshed.data();
-          document.getElementById('dealContent').classList.add('hidden');
-          renderDeal(dealData);
-        } catch (err) {
-          console.error(err);
-          showDealError('Something went wrong. Try again.');
-          agreeBtn.disabled = false;
-          agreeBtn.textContent = 'I Agree to This Deal';
+      // ── Agreement section ──
+      if (!d.freelancerAgreed || !d.clientAgreed) {
+        if (!currentUser) {
+          document.getElementById('agreementSection').classList.remove('hidden');
+          document.getElementById('agreementMsg').textContent = 'Log in to agree to this deal.';
+          document.getElementById('agreeBtn').disabled = true;
+          return;
         }
-      });
+
+        if (!isFreelancer && !isClient) return;
+
+        const alreadyAgreed = (isFreelancer && d.freelancerAgreed) || (isClient && d.clientAgreed);
+        if (alreadyAgreed) {
+          document.getElementById('agreementSection').classList.remove('hidden');
+          document.getElementById('agreementMsg').textContent = "✅ You've already agreed. Waiting for the other party.";
+          document.getElementById('agreeBtn').classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('agreementSection').classList.remove('hidden');
+        document.getElementById('agreementMsg').textContent = isFreelancer
+          ? 'As the freelancer, you can agree to this deal below.'
+          : 'As the client, please review and agree to this deal.';
+
+        document.getElementById('agreeBtn').addEventListener('click', async () => {
+          const confirmed = confirm('By clicking OK, you confirm you agree to all terms of this deal.');
+          if (!confirmed) return;
+
+          const agreeBtn = document.getElementById('agreeBtn');
+          agreeBtn.disabled = true;
+          agreeBtn.textContent = 'Saving...';
+
+          try {
+            const updateField = isFreelancer ? { freelancerAgreed: true } : { clientAgreed: true };
+            const otherAgreed = isFreelancer ? dealData.clientAgreed : dealData.freelancerAgreed;
+            if (otherAgreed) updateField.status = 'active';
+
+            await updateDoc(doc(db, 'deals', dealId), updateField);
+
+            if (isClient) {
+              try {
+                await emailjs.send("service_li63q25", "template_5csdxp7", {
+                  email: dealData.freelancerEmail,
+                  freelancer_name: dealData.freelancerName,
+                  client_name: dealData.clientName,
+                  work_description: dealData.workDescription,
+                  amount: Number(dealData.paymentAmount).toLocaleString('en-IN'),
+                  deadline: formatDate(dealData.deadline),
+                  deal_link: `${window.location.origin}/deal.html?id=${dealId}`
+                });
+              } catch (emailErr) {
+                console.warn('Email failed (non-blocking):', emailErr);
+              }
+            }
+
+            const refreshed = await getDoc(doc(db, 'deals', dealId));
+            dealData = refreshed.data();
+            document.getElementById('dealContent').classList.add('hidden');
+            renderDeal(dealData);
+          } catch (err) {
+            console.error(err);
+            showDealError('Something went wrong. Try again.');
+            agreeBtn.disabled = false;
+            agreeBtn.textContent = 'I Agree to This Deal';
+          }
+        });
+      }
     }
 
     document.getElementById('navLogoutBtn').addEventListener('click', async () => {
