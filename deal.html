@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deal - Freebie</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    .payment-update-box {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f7f6f2;
+      border-radius: 10px;
+      border: 1px solid #e0ddd8;
+    }
+    .payment-update-box h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: #28251d;
+    }
+    .payment-select-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .payment-select-row select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .payment-select-row select:focus {
+      outline: none;
+      border-color: #01696f;
+    }
+    .complete-box {
+      margin-top: 24px;
+      padding: 20px;
+      background: #f0f7f4;
+      border-radius: 10px;
+      border: 1px solid #c3ddd6;
+    }
+    .complete-box h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: #28251d;
+    }
+    .complete-box p {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+    .completed-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: #1a1a1a;
+      color: #fff;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .pay-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pay-unpaid  { background: #fff3cd; color: #856404; }
+    .pay-partial { background: #ffe0b2; color: #a05c00; }
+    .pay-paid    { background: #d1e7dd; color: #0a3622; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">Freebie</a>
+    <div class="nav-right">
+      <span id="navUserName"></span>
+      <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <a href="#" id="backLink" class="back-link">&larr; Back to Dashboard</a>
+
+    <div id="loadingState"><p>Loading deal...</p></div>
+
+    <div id="dealContent" class="hidden">
+      <h1>Deal Details</h1>
+      <p class="tagline" id="dealStatusTagline"></p>
+
+      <div class="deal-card">
+        <div class="deal-row">
+          <span class="deal-label">Freelancer</span>
+          <span class="deal-value" id="dFreelancerName"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Client</span>
+          <span class="deal-value" id="dClientName"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Work Description</span>
+          <span class="deal-value" id="dWorkDescription"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Payment Amount</span>
+          <span class="deal-value" id="dPaymentAmount"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Deadline</span>
+          <span class="deal-value" id="dDeadline"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Payment Status</span>
+          <span class="deal-value" id="dPaymentStatus"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Status</span>
+          <span class="deal-value" id="dStatus"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Freelancer Agreed</span>
+          <span class="deal-value" id="dFreelancerAgreed"></span>
+        </div>
+        <div class="deal-row">
+          <span class="deal-label">Client Agreed</span>
+          <span class="deal-value" id="dClientAgreed"></span>
+        </div>
+      </div>
+
+      <!-- Mark as Completed — freelancer only, active deals -->
+      <div id="completeBox" class="complete-box hidden">
+        <h3>Mark Deal as Completed</h3>
+        <p>Once you mark this as completed, both parties will see it as closed. Make sure the work has been delivered and payment is settled before doing this.</p>
+        <button class="btn" id="markCompleteBtn">✅ Mark as Completed</button>
+        <p id="completeMsg" class="hidden" style="margin-top:10px; color:green; font-size:13px;"></p>
+      </div>
+
+      <!-- Already completed notice -->
+      <div id="completedNotice" class="hidden" style="margin-top:24px; padding:16px 20px; background:#f0f4ff; border-radius:10px; border:1px solid #c8d4f0;">
+        <span class="completed-badge">✔ Deal Completed</span>
+        <p style="margin-top:10px; font-size:13px; color:#555;">This deal has been marked as completed by the freelancer.</p>
+      </div>
+
+      <!-- Payment Status Update — freelancer only, active or completed -->
+      <div id="paymentUpdateBox" class="payment-update-box hidden">
+        <h3>Update Payment Status</h3>
+        <div class="payment-select-row">
+          <select id="paymentStatusSelect">
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partial</option>
+            <option value="paid">Paid</option>
+          </select>
+          <button class="btn" id="updatePaymentBtn">Update</button>
+        </div>
+        <p id="paymentUpdateMsg" class="hidden" style="margin-top:10px; color:green; font-size:13px;"></p>
+      </div>
+
+      <!-- Agreement section -->
+      <div id="agreementSection" class="hidden" style="margin-top:24px;">
+        <p id="agreementMsg" style="margin-bottom:16px; color:#555;"></p>
+        <button class="btn" id="agreeBtn">I Agree to This Deal</button>
+      </div>
+
+      <!-- Fully agreed box -->
+      <div id="fullyAgreedBox" class="success-box hidden" style="margin-top:24px;">
+        <p><strong>✅ Both parties have agreed!</strong></p>
+        <p style="margin-top:8px; color:#555;">This deal is now active.</p>
+        <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap;">
+          <button type="button" class="btn" id="downloadPdfBtn">📄 Download PDF Receipt</button>
+        </div>
+      </div>
+
+      <p id="dealError" class="hidden" style="color:#c0392b; margin-top:16px;"></p>
+    </div>
+
+    <div id="notFound" class="hidden"><p>Deal not found.</p></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    emailjs.init("srtxybM1XCY_0Q07u");
+
+    const params = new URLSearchParams(window.location.search);
+    const dealId = params.get('id');
+
+    let currentUser = null;
+    let dealData = null;
+
+    // ─── Helpers ───────────────────────────────────────────────
+    function formatCurrency(amount) {
+      return '₹' + Number(amount).toLocaleString('en-IN');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return `${d} ${months[parseInt(m,10)-1]} ${y}`;
+    }
+
+    function showDealError(msg) {
+      const el = document.getElementById('dealError');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function payPillHTML(status) {
+      const map = {
+        unpaid:  { cls: 'pay-unpaid',  label: 'Unpaid'  },
+        partial: { cls: 'pay-partial', label: 'Partial' },
+        paid:    { cls: 'pay-paid',    label: 'Paid'    }
+      };
+      const p = map[status] || map.unpaid;
+      return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
+    }
+
+    // ─── PDF ───────────────────────────────────────────────────
+    function downloadPDF(deal, id) {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const margin = 20;
+      const contentW = pageW - margin * 2;
+
+      pdf.setFillColor(1, 105, 111);
+      pdf.rect(0, 0, pageW, 38, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(22);
+      pdf.text('Freebie', margin, 18);
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Deal Receipt', margin, 26);
+      pdf.setFontSize(8);
+      pdf.setTextColor(200, 230, 232);
+      pdf.text(`Deal ID: ${id}`, margin, 33);
+      const genDate = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+      pdf.text(`Generated: ${genDate}`, pageW - margin, 33, { align: 'right' });
+
+      let y = 52;
+
+      const statusColor = ['active','completed'].includes(deal.status) ? [39,174,96] : [231,76,60];
+      pdf.setFillColor(...statusColor);
+      pdf.roundedRect(margin, y - 5, 36, 8, 2, 2, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(deal.status.toUpperCase(), margin + 18, y, { align: 'center' });
+      y += 12;
+
+      pdf.setTextColor(40, 37, 29);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(13);
+      pdf.text('Deal Details', margin, y);
+      y += 2;
+      pdf.setDrawColor(212, 209, 202);
+      pdf.setLineWidth(0.4);
+      pdf.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      function row(label, value, highlight = false) {
+        if (highlight) {
+          pdf.setFillColor(206, 220, 216);
+          pdf.roundedRect(margin, y - 4, contentW, 10, 1.5, 1.5, 'F');
+        }
+        pdf.setTextColor(122, 121, 116);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8.5);
+        pdf.text(label, margin + 3, y + 1);
+        pdf.setTextColor(40, 37, 29);
+        pdf.setFont('helvetica', highlight ? 'bold' : 'normal');
+        pdf.setFontSize(highlight ? 10 : 9);
+        pdf.text(String(value), margin + 50, y + 1);
+        y += 13;
+      }
+
+      row('Freelancer', deal.freelancerName || deal.freelancerEmail);
+      row('Freelancer Email', deal.freelancerEmail);
+      row('Client', deal.clientName);
+      row('Client Email', deal.clientEmail);
+      row('Created Date', formatDate(deal.createdAt ? deal.createdAt.split('T')[0] : ''));
+      y += 2;
+
+      pdf.setTextColor(122, 121, 116);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.text('Work Description', margin + 3, y);
+      y += 6;
+      pdf.setTextColor(40, 37, 29);
+      pdf.setFontSize(9);
+      const descLines = pdf.splitTextToSize(deal.workDescription, contentW - 6);
+      pdf.text(descLines, margin + 3, y);
+      y += descLines.length * 5 + 6;
+
+      pdf.setDrawColor(212, 209, 202);
+      pdf.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      row('Deadline', formatDate(deal.deadline));
+      row('Payment Amount', formatCurrency(deal.paymentAmount), true);
+      row('Payment Status', (deal.paymentStatus || 'unpaid').toUpperCase());
+      row('Deal Status', deal.status.toUpperCase());
+      y += 4;
+
+      pdf.setDrawColor(212, 209, 202);
+      pdf.line(margin, y, pageW - margin, y);
+      y += 8;
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(40, 37, 29);
+      pdf.text('Agreement Status', margin, y);
+      y += 8;
+
+      function agreeBadge(label, agreed, x) {
+        pdf.setFillColor(...(agreed ? [39,174,96] : [189,195,199]));
+        pdf.roundedRect(x, y - 5, 70, 10, 2, 2, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${label}: ${agreed ? '✓ Agreed' : 'Pending'}`, x + 35, y, { align: 'center' });
+      }
+      agreeBadge('Freelancer', deal.freelancerAgreed, margin);
+      agreeBadge('Client', deal.clientAgreed, margin + 76);
+      y += 14;
+
+      const footerY = pdf.internal.pageSize.getHeight() - 18;
+      pdf.setDrawColor(212, 209, 202);
+      pdf.line(margin, footerY - 4, pageW - margin, footerY - 4);
+      pdf.setTextColor(122, 121, 116);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.text('This is a system-generated receipt from Freebie. Please retain it for your records.', pageW / 2, footerY, { align: 'center' });
+      pdf.text(`Generated by Freebie - freebie-5762a.web.app - ${genDate}`, pageW / 2, footerY + 5, { align: 'center' });
+      pdf.save(`freebie-deal-${id.substring(0, 8)}.pdf`);
+    }
+
+    // ─── Auth & Load ──────────────────────────────────────────
+    onAuthStateChanged(auth, async (user) => {
+      currentUser = user;
+      if (user) document.getElementById('navUserName').textContent = user.displayName || user.email;
+
+      if (!dealId) {
+        document.getElementById('loadingState').classList.add('hidden');
+        document.getElementById('notFound').classList.remove('hidden');
+        return;
+      }
+
+      const dealSnap = await getDoc(doc(db, 'deals', dealId));
+      document.getElementById('loadingState').classList.add('hidden');
+
+      if (!dealSnap.exists()) {
+        document.getElementById('notFound').classList.remove('hidden');
+        return;
+      }
+
+      dealData = dealSnap.data();
+      renderDeal(dealData);
+    });
+
+    // ─── Render ───────────────────────────────────────────────
+    function renderDeal(d) {
+      document.getElementById('dealContent').classList.remove('hidden');
+
+      // Back link
+      if (currentUser) {
+        const ue = currentUser.email.toLowerCase();
+        if (ue === d.freelancerEmail.toLowerCase())
+          document.getElementById('backLink').href = 'freelancer-dashboard.html';
+        else if (ue === d.clientEmail.toLowerCase())
+          document.getElementById('backLink').href = 'client-dashboard.html';
+      }
+
+      // Tagline
+      const tagline = document.getElementById('dealStatusTagline');
+      if (d.status === 'completed') {
+        tagline.textContent = '✔ This deal has been completed.';
+        tagline.style.color = '#1a1a1a';
+      } else if (d.status === 'active') {
+        tagline.textContent = '✅ This deal is active — both parties have agreed.';
+        tagline.style.color = '#27ae60';
+      } else if (d.status === 'disputed') {
+        tagline.textContent = '⚠️ This deal is under dispute.';
+        tagline.style.color = '#c0392b';
+      } else {
+        tagline.textContent = '⏳ Waiting for both parties to agree.';
+        tagline.style.color = '#e67e22';
+      }
+
+      // Fields
+      document.getElementById('dFreelancerName').textContent = d.freelancerName || d.freelancerEmail;
+      document.getElementById('dClientName').textContent = d.clientName;
+      document.getElementById('dWorkDescription').textContent = d.workDescription;
+      document.getElementById('dPaymentAmount').textContent = formatCurrency(d.paymentAmount);
+      document.getElementById('dDeadline').textContent = formatDate(d.deadline);
+      document.getElementById('dPaymentStatus').innerHTML = payPillHTML(d.paymentStatus || 'unpaid');
+      document.getElementById('dStatus').textContent = d.status.charAt(0).toUpperCase() + d.status.slice(1);
+      document.getElementById('dFreelancerAgreed').textContent = d.freelancerAgreed ? '✅ Yes' : '⏳ Pending';
+      document.getElementById('dClientAgreed').textContent = d.clientAgreed ? '✅ Yes' : '⏳ Pending';
+
+      const isFreelancer = currentUser && currentUser.email.toLowerCase() === d.freelancerEmail.toLowerCase();
+      const isClient = currentUser && currentUser.email.toLowerCase() === d.clientEmail.toLowerCase();
+
+      // ── Mark as Completed (freelancer, active deals only) ──
+      if (isFreelancer && d.status === 'active') {
+        document.getElementById('completeBox').classList.remove('hidden');
+        document.getElementById('markCompleteBtn').addEventListener('click', async () => {
+          const confirmed = confirm('Mark this deal as completed? This means the work is done and both sides are settled.');
+          if (!confirmed) return;
+
+          const btn = document.getElementById('markCompleteBtn');
+          btn.disabled = true;
+          btn.textContent = 'Saving...';
+
+          try {
+            await updateDoc(doc(db, 'deals', dealId), { status: 'completed' });
+            dealData.status = 'completed';
+            // Re-render fresh
+            document.getElementById('dealContent').classList.add('hidden');
+            document.getElementById('completeBox').classList.add('hidden');
+            renderDeal(dealData);
+          } catch (err) {
+            console.error(err);
+            showDealError('Failed to mark as completed. Try again.');
+            btn.disabled = false;
+            btn.textContent = '✅ Mark as Completed';
+          }
+        });
+      }
+
+      // ── Completed notice (everyone, completed deals) ──
+      if (d.status === 'completed') {
+        document.getElementById('completedNotice').classList.remove('hidden');
+      }
+
+      // ── Payment status update (freelancer, active or completed) ──
+      if (isFreelancer && (d.status === 'active' || d.status === 'completed')) {
+        const box = document.getElementById('paymentUpdateBox');
+        box.classList.remove('hidden');
+        document.getElementById('paymentStatusSelect').value = d.paymentStatus || 'unpaid';
+
+        document.getElementById('updatePaymentBtn').addEventListener('click', async () => {
+          const newStatus = document.getElementById('paymentStatusSelect').value;
+          const btn = document.getElementById('updatePaymentBtn');
+          btn.disabled = true;
+          btn.textContent = 'Saving...';
+          try {
+            await updateDoc(doc(db, 'deals', dealId), { paymentStatus: newStatus });
+            dealData.paymentStatus = newStatus;
+            document.getElementById('dPaymentStatus').innerHTML = payPillHTML(newStatus);
+            const msg = document.getElementById('paymentUpdateMsg');
+            msg.textContent = '✅ Payment status updated!';
+            msg.classList.remove('hidden');
+            setTimeout(() => msg.classList.add('hidden'), 3000);
+          } catch (err) {
+            console.error(err);
+            showDealError('Failed to update payment status.');
+          }
+          btn.disabled = false;
+          btn.textContent = 'Update';
+        });
+      }
+
+      // ── PDF button (both agreed) ──
+      if (d.freelancerAgreed && d.clientAgreed) {
+        document.getElementById('fullyAgreedBox').classList.remove('hidden');
+        document.getElementById('downloadPdfBtn').addEventListener('click', () => downloadPDF(d, dealId));
+
+        // Don't show agreement buttons if already agreed
+        if (d.status !== 'pending') return;
+      }
+
+      // ── Agreement section ──
+      if (!d.freelancerAgreed || !d.clientAgreed) {
+        if (!currentUser) {
+          document.getElementById('agreementSection').classList.remove('hidden');
+          document.getElementById('agreementMsg').textContent = 'Log in to agree to this deal.';
+          document.getElementById('agreeBtn').disabled = true;
+          return;
+        }
+
+        if (!isFreelancer && !isClient) return;
+
+        const alreadyAgreed = (isFreelancer && d.freelancerAgreed) || (isClient && d.clientAgreed);
+        if (alreadyAgreed) {
+          document.getElementById('agreementSection').classList.remove('hidden');
+          document.getElementById('agreementMsg').textContent = "✅ You've already agreed. Waiting for the other party.";
+          document.getElementById('agreeBtn').classList.add('hidden');
+          return;
+        }
+
+        document.getElementById('agreementSection').classList.remove('hidden');
+        document.getElementById('agreementMsg').textContent = isFreelancer
+          ? 'As the freelancer, you can agree to this deal below.'
+          : 'As the client, please review and agree to this deal.';
+
+        document.getElementById('agreeBtn').addEventListener('click', async () => {
+          const confirmed = confirm('By clicking OK, you confirm you agree to all terms of this deal.');
+          if (!confirmed) return;
+
+          const agreeBtn = document.getElementById('agreeBtn');
+          agreeBtn.disabled = true;
+          agreeBtn.textContent = 'Saving...';
+
+          try {
+            const updateField = isFreelancer ? { freelancerAgreed: true } : { clientAgreed: true };
+            const otherAgreed = isFreelancer ? dealData.clientAgreed : dealData.freelancerAgreed;
+            if (otherAgreed) updateField.status = 'active';
+
+            await updateDoc(doc(db, 'deals', dealId), updateField);
+
+            if (isClient) {
+              try {
+                await emailjs.send("service_li63q25", "template_5csdxp7", {
+                  email: dealData.freelancerEmail,
+                  freelancer_name: dealData.freelancerName,
+                  client_name: dealData.clientName,
+                  work_description: dealData.workDescription,
+                  amount: Number(dealData.paymentAmount).toLocaleString('en-IN'),
+                  deadline: formatDate(dealData.deadline),
+                  deal_link: `${window.location.origin}/deal.html?id=${dealId}`
+                });
+              } catch (emailErr) {
+                console.warn('Email failed (non-blocking):', emailErr);
+              }
+            }
+
+            const refreshed = await getDoc(doc(db, 'deals', dealId));
+            dealData = refreshed.data();
+            document.getElementById('dealContent').classList.add('hidden');
+            renderDeal(dealData);
+          } catch (err) {
+            console.error(err);
+            showDealError('Something went wrong. Try again.');
+            agreeBtn.disabled = false;
+            agreeBtn.textContent = 'I Agree to This Deal';
+          }
+        });
+      }
+    }
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

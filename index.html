@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freebie - Deal Tracker</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    #roleSection {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    #roleSection.visible {
+      opacity: 1;
+    }
+    .loading-screen {
+      position: fixed;
+      inset: 0;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.3s ease;
+    }
+    .loading-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="loading-screen" id="loadingScreen">
+    <p style="color:#999; font-size:15px;">Loading...</p>
+  </div>
+
+  <nav class="navbar">
+    <a href="index.html" class="nav-brand">Freebie</a>
+  </nav>
+
+  <div class="container">
+
+    <h1>Freebie</h1>
+    <p class="tagline">Create a deal. Share the link. Track it together.</p>
+
+    <div id="roleSection">
+      <div class="role-cards">
+
+        <div class="role-card">
+          <div class="role-icon">💼</div>
+          <h2>I'm a Freelancer</h2>
+          <p>Create deals, share links with clients, and track agreements.</p>
+          <a href="login-freelancer.html" class="btn">Login as Freelancer</a>
+        </div>
+
+        <div class="role-card">
+          <div class="role-icon">🤝</div>
+          <h2>I'm a Client</h2>
+          <p>View deals shared with you, review terms, and agree.</p>
+          <a href="login-client.html" class="btn btn-outline">Login as Client</a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const loadingScreen = document.getElementById('loadingScreen');
+    const roleSection = document.getElementById('roleSection');
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const snap = await getDoc(doc(db, 'users', user.uid));
+          if (snap.exists()) {
+            const role = snap.data().role;
+            const redirect = sessionStorage.getItem('redirectAfterLogin');
+            sessionStorage.removeItem('redirectAfterLogin');
+            if (redirect) { window.location.href = redirect; return; }
+            if (role === 'freelancer') { window.location.href = 'freelancer-dashboard.html'; return; }
+            if (role === 'client') { window.location.href = 'client-dashboard.html'; return; }
+          }
+        } catch (err) {
+          console.error('Auth check failed:', err);
+        }
+      }
+
+      // No user or no role found — show role cards
+      loadingScreen.classList.add('hidden');
+      roleSection.classList.add('visible');
+    });
+  </script>
+
+</body>
+</html>
