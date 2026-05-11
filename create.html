@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create a Deal - Freebie</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="style.css" />
   <style>
     .char-counter { font-size: 12px; color: #999; text-align: right; margin-top: 4px; }
     .char-counter.warn { color: #c0392b; }
@@ -13,11 +13,13 @@
 </head>
 <body>
   <nav class="navbar">
+    <div class="nav-container">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
       <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
+  </div>
   </nav>
 
   <div class="container">
@@ -72,6 +74,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { showError, hideError } from "./ui-utils.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -94,7 +97,6 @@
 
     const form = document.getElementById('dealForm');
     const submitBtn = document.getElementById('submitBtn');
-    const formError = document.getElementById('formError');
     const successBox = document.getElementById('successBox');
     const dealLink = document.getElementById('dealLink');
     const copySuccessMsg = document.getElementById('copySuccessMsg');
@@ -110,15 +112,6 @@
     const todayStr = new Date().toISOString().split('T')[0];
     document.getElementById('deadline').setAttribute('min', todayStr);
 
-    function showError(msg) {
-      formError.textContent = msg;
-      formError.classList.remove('hidden');
-    }
-
-    function clearError() {
-      formError.textContent = '';
-      formError.classList.add('hidden');
-    }
 
     function formatDateReadable(dateStr) {
       if (!dateStr) return '—';
@@ -132,7 +125,7 @@
       document.getElementById('navUserName').textContent = user.displayName || user.email;
 
       const userSnap = await getDoc(doc(db, 'users', user.uid));
-      if (!userSnap.exists()) { showError('Profile not found.'); submitBtn.disabled = true; return; }
+      if (!userSnap.exists()) { showError('formError', 'Profile not found.'); submitBtn.disabled = true; return; }
 
       const userData = userSnap.data();
       if (userData.role !== 'freelancer') { window.location.href = 'client-dashboard.html'; return; }
@@ -143,9 +136,9 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      clearError();
+      hideError('formError');
 
-      if (!currentUser || !freelancerProfile) { showError('Still loading. Try again.'); return; }
+      if (!currentUser || !freelancerProfile) { showError('formError', 'Still loading. Try again.'); return; }
 
       const clientName = document.getElementById('clientName').value.trim();
       const clientEmail = document.getElementById('clientEmail').value.trim().toLowerCase();
@@ -153,12 +146,12 @@
       const paymentAmount = Number(document.getElementById('paymentAmount').value);
       const deadline = document.getElementById('deadline').value;
 
-      if (!clientName) { showError('Enter client name.'); return; }
-      if (!clientEmail) { showError('Enter client email.'); return; }
-      if (clientEmail === currentUser.email.toLowerCase()) { showError("Client email can't be your own email."); return; }
-      if (!workDescription) { showError('Enter work description.'); return; }
-      if (paymentAmount <= 0) { showError('Enter a valid payment amount.'); return; }
-      if (!deadline) { showError('Select a deadline.'); return; }
+      if (!clientName) { showError('formError', 'Enter client name.'); return; }
+      if (!clientEmail) { showError('formError', 'Enter client email.'); return; }
+      if (clientEmail === currentUser.email.toLowerCase()) { showError('formError', "Client email can't be your own email."); return; }
+      if (!workDescription) { showError('formError', 'Enter work description.'); return; }
+      if (paymentAmount <= 0) { showError('formError', 'Enter a valid payment amount.'); return; }
+      if (!deadline) { showError('formError', 'Select a deadline.'); return; }
 
       const confirmed = confirm(
         `Creating deal with:\n\nClient: ${clientName}\nWork: ${workDescription.substring(0, 80)}${workDescription.length > 80 ? '...' : ''}\nAmount: ₹${paymentAmount.toLocaleString('en-IN')}\nDeadline: ${formatDateReadable(deadline)}\n\nProceed?`
@@ -211,7 +204,7 @@
         successBox.classList.remove('hidden');
       } catch (err) {
         console.error(err);
-        showError('Something went wrong. Try again.');
+        showError('formError', 'Something went wrong. Try again.');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Create Deal';
       }
