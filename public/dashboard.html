@@ -34,9 +34,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    // ─── Fetch config securely from backend ──────────────────
-    const res = await fetch('/api/config');
-    const firebaseConfig = await res.json();
+    const response = await fetch('/api/config');
+    const firebaseConfig = await response.json();
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);

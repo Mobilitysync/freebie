@@ -90,9 +90,8 @@
     import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-    // ─── Fetch config securely from backend ──────────────────
-    const res = await fetch('/api/config');
-    const firebaseConfig = await res.json();
+    const response = await fetch('/api/config');
+    const firebaseConfig = await response.json();
 
     const app  = initializeApp(firebaseConfig);
     const db   = getFirestore(app);

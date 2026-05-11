@@ -191,12 +191,8 @@
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { payPillHTML } from "./utils.js";
 
-    // ─── Fetch Firebase config securely from backend ──────────
-    async function getFirebaseConfig() {
-      const res = await fetch('/api/config');
-      if (!res.ok) throw new Error('Failed to load app configuration.');
-      return res.json();
-    }
+    const response = await fetch('/api/config');
+    const firebaseConfig = await response.json();
 
     function escapeHTML(str) {
       if (!str) return "";
