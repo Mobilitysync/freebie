@@ -89,7 +89,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -240,12 +240,17 @@
             allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
 
             // Auto-expire past-deadline pending deals
-            await Promise.all(allDeals.map(async ({ id, data: d }) => {
-                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
-                    await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+            const batch = writeBatch(db);
+            let hasExpired = false;
+            const now = new Date();
+            allDeals.forEach(({ id, data: d }) => {
+                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+                    batch.update(doc(db, 'deals', id), { status: 'expired' });
                     d.status = 'expired';
+                    hasExpired = true;
                 }
-            }));
+            });
+            if (hasExpired) await batch.commit();
 
             if (allDeals.length === 0) {
                 document.getElementById('dealsList').innerHTML = `
