@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard – Freebie</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -47,7 +47,24 @@ const firebaseConfig = {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     let allDeals = [];
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
 
     async function loadDeals() {
       try {
@@ -88,22 +105,23 @@ const firebaseConfig = {
         card.innerHTML = `
           <div class="dash-card-top">
             <div>
-              <span class="deal-badge badge-${deal.status}">
-                ${deal.status.replace('_', ' ').toUpperCase()}
+              <span class="deal-badge badge-${escapeHTML(deal.status)}">
+                ${escapeHTML(deal.status).replace('_', ' ').toUpperCase()}
+                ${escapeHTML(deal.status.replace('_', ' ').toUpperCase())}
               </span>
-              <h3 class="dash-card-title">${deal.freelancerName} × ${deal.clientName}</h3>
+              <h3 class="dash-card-title">${escapeHTML(deal.freelancerName)} × ${escapeHTML(deal.clientName)}</h3>
             </div>
             <span class="dash-amount">₹${Number(deal.paymentAmount).toLocaleString('en-IN')}</span>
           </div>
-          <p class="dash-work">${deal.workDescription}</p>
+          <p class="dash-work">${escapeHTML(deal.workDescription)}</p>
           <div class="dash-card-footer">
-            <span class="dash-meta">📅 ${deal.deadline}</span>
+            <span class="dash-meta">📅 ${escapeHTML(deal.deadline)}</span>
             <span class="dash-meta">
               ${deal.freelancerAgreed ? '✅' : '⏳'} Freelancer
               &nbsp;|&nbsp;
               ${deal.clientAgreed ? '✅' : '⏳'} Client
             </span>
-            <a href="deal.html?id=${deal.id}" class="dash-view-btn">View →</a>
+            <a href="deal.html?id=${escapeHTML(deal.id)}" class="dash-view-btn">View →</a>
           </div>
         `;
         list.appendChild(card);
