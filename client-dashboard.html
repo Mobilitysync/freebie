@@ -89,7 +89,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -104,6 +104,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
+
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         let allDeals = [];
         let currentFilter = 'all';
@@ -138,6 +148,8 @@
             if (!str) return 'Untitled work';
             const truncated = str.length > limit ? str.substring(0, limit) + '...' : str;
             return escapeHTML(truncated);
+            const escaped = escapeHTML(str);
+            return escaped.length > limit ? escaped.substring(0, limit) + '...' : escaped;
         }
 
         function renderStats() {
@@ -206,10 +218,11 @@
                             <h3>${safeText(d.workDescription)}</h3>
                             <p class="deal-meta">
                                 Freelancer: ${escapeHTML(d.freelancerName) || 'Unknown'}
+                                Freelancer: ${escapeHTML(d.freelancerName || 'Unknown')}
                                 &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
-                                &nbsp;|&nbsp; Due: ${formatDate(d.deadline)}
+                                &nbsp;|&nbsp; Due: ${escapeHTML(formatDate(d.deadline))}
                             </p>
-                            <p class="deal-meta" style="margin-top:4px;">${agreedText}</p>
+                            <p class="deal-meta" style="margin-top:4px;">${escapeHTML(agreedText)}</p>
                             <span class="pay-pill ${pay.cls}">${pay.label}</span>
                         </div>
                         <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
@@ -237,12 +250,17 @@
             allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
 
             // Auto-expire past-deadline pending deals
-            await Promise.all(allDeals.map(async ({ id, data: d }) => {
-                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
-                    await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+            const batch = writeBatch(db);
+            let hasExpired = false;
+            const now = new Date();
+            allDeals.forEach(({ id, data: d }) => {
+                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+                    batch.update(doc(db, 'deals', id), { status: 'expired' });
                     d.status = 'expired';
+                    hasExpired = true;
                 }
-            }));
+            });
+            if (hasExpired) await batch.commit();
 
             if (allDeals.length === 0) {
                 document.getElementById('dealsList').innerHTML = `

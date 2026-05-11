@@ -47,6 +47,16 @@ const firebaseConfig = {
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     let allDeals = [];
 
     function escapeHTML(str) {
@@ -97,6 +107,7 @@ const firebaseConfig = {
             <div>
               <span class="deal-badge badge-${escapeHTML(deal.status)}">
                 ${escapeHTML(deal.status).replace('_', ' ').toUpperCase()}
+                ${escapeHTML(deal.status.replace('_', ' ').toUpperCase())}
               </span>
               <h3 class="dash-card-title">${escapeHTML(deal.freelancerName)} × ${escapeHTML(deal.clientName)}</h3>
             </div>
@@ -104,7 +115,7 @@ const firebaseConfig = {
           </div>
           <p class="dash-work">${escapeHTML(deal.workDescription)}</p>
           <div class="dash-card-footer">
-            <span class="dash-meta">📅 ${deal.deadline}</span>
+            <span class="dash-meta">📅 ${escapeHTML(deal.deadline)}</span>
             <span class="dash-meta">
               ${deal.freelancerAgreed ? '✅' : '⏳'} Freelancer
               &nbsp;|&nbsp;

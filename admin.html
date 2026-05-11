@@ -216,6 +216,16 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
+  function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   // SHA-256 of "freebie2026"
   const CORRECT_HASH = 'b9a4f3d2c1e6a7b8f0d5c2e3a1b4d7f9c8e2a5b6d3f1c4e7a2b5d8f0c3e6a9';
 
@@ -365,9 +375,15 @@
       return `<tr>
         <td>${escapeHTML(d.freelancerName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail) || ''}</span></td>
         <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
+        ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
+        : '';
+
+      return `<tr>
+        <td>${escapeHTML(d.freelancerName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail || '')}</span></td>
+        <td>${escapeHTML(d.clientName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail || '')}</span></td>
         <td style="max-width:200px">${escapeHTML((d.workDescription||'').substring(0,60))}${(d.workDescription||'').length > 60 ? '…' : ''}</td>
         <td>₹${(d.paymentAmount||0).toLocaleString('en-IN')}</td>
-        <td>${formatDate(d.deadline)}</td>
+        <td>${escapeHTML(formatDate(d.deadline))}</td>
         <td>
           <span class="badge badge-${escapeHTML(d.status)}">${escapeHTML(d.status)}</span>
           ${resolvedNote}
