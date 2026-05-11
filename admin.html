@@ -79,8 +79,6 @@
     }
     .filter-btn:hover { border-color: #1a1a1a; }
     .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-
-    /* Dispute modal */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.45);
       display: flex; align-items: center; justify-content: center;
@@ -122,14 +120,6 @@
 </head>
 <body>
 
-<!-- PIN SCREEN -->
-<div class="pin-screen hidden" id="pinScreen">
-  <div class="pin-box">
-    <h2>Admin Access</h2>
-    <p>Enter your admin PIN to continue</p>
-    <input type="password" id="pinInput" maxlength="20" />
-    <button class="btn" id="pinSubmitBtn" style="width:100%">Enter</button>
-    <p class="pin-error hidden" id="pinError">Incorrect PIN. Try again.</p>
 <!-- AUTH SCREEN -->
 <div class="auth-screen" id="authScreen">
   <div class="auth-box" id="loadingBox">
@@ -149,12 +139,12 @@
 <div class="admin-panel" id="adminPanel">
   <nav class="navbar">
     <div class="nav-container">
-    <a href="index.html" class="nav-brand">Freebie Admin</a>
-    <div class="nav-right">
-      <span style="font-size:13px;color:#888" id="dealCountLabel"></span>
-      <button class="btn btn-outline btn-sm" id="logoutAdminBtn">Exit</button>
+      <a href="index.html" class="nav-brand">Freebie Admin</a>
+      <div class="nav-right">
+        <span style="font-size:13px;color:#888" id="dealCountLabel"></span>
+        <button class="btn btn-outline btn-sm" id="logoutAdminBtn">Exit</button>
+      </div>
     </div>
-  </div>
   </nav>
 
   <div class="container" style="max-width:1100px; text-align:left">
@@ -210,135 +200,19 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-  import { filterAndSortDeals } from "./admin-logic.js";
-  import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { filterAndSortDeals } from "./admin-logic.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-    authDomain: "freebie-5762a.firebaseapp.com",
-    projectId: "freebie-5762a",
-    storageBucket: "freebie-5762a.firebasestorage.app",
-    messagingSenderId: "621180509813",
-    appId: "1:621180509813:web:51c7403390e80c91e1a23c"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-
-  let currentUser = null;
-  let isAdminAuthenticated = false;
-  // Auth & Role check
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.href = 'index.html#auth';
-      return;
-    }
-  function escapeHTML(str) {
-    if (!str) return "";
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  // SHA-256 of "freebie2026"
-  const CORRECT_HASH = 'b9a4f3d2c1e6a7b8f0d5c2e3a1b4d7f9c8e2a5b6d3f1c4e7a2b5d8f0c3e6a9';
-
-  let correctHash;
-  hashPin('freebie2026').then(h => { correctHash = h; });
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      // Not logged in: redirect to landing
-      window.location.href = 'index.html#auth';
-      return;
-    }
-    currentUser = user;
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    if (!userDoc.exists() || userDoc.data().role !== 'admin') {
-      alert('Access denied. Admin role required.');
-      await signOut(auth);
-      window.location.href = 'index.html';
-      return;
-    }
-    // Authenticated as admin, now show PIN screen
-    document.getElementById('pinScreen').classList.remove('hidden');
-  });
-
-  // PIN gate
-  document.getElementById('pinSubmitBtn').addEventListener('click', async () => {
-    const pin = document.getElementById('pinInput').value;
-    const hash = await hashPin(pin);
-    if (hash === correctHash) {
-      isAdminAuthenticated = true;
-      document.getElementById('pinScreen').style.display = 'none';
-      document.getElementById('adminPanel').classList.add('visible');
-      loadDeals();
-    } else {
-      document.getElementById('pinError').classList.remove('hidden');
-      document.getElementById('pinInput').value = '';
-      document.getElementById('pinInput').focus();
-    try {
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().role === 'admin') {
-        document.getElementById('authScreen').style.display = 'none';
-        document.getElementById('adminPanel').classList.add('visible');
-        loadDeals();
-      } else {
-        document.getElementById('loadingBox').classList.add('hidden');
-        document.getElementById('deniedBox').classList.remove('hidden');
-      }
-    } catch (err) {
-      console.error("Error checking admin role:", err);
-      document.getElementById('loadingBox').innerHTML = `
-        <h2 style="color:#c0392b">Error</h2>
-        <p>Could not verify permissions. Please try again later.</p>
-        <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
-      `;
-    }
-  });
-
-  document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
-    await signOut(auth);
-    window.location.href = 'index.html';
-  });
-  document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
-    await signOut(auth);
-    window.location.href = 'index.html';
-  });
-
-  // ─── State ─────────────────────────────────────────────────
-  let allDeals = [];
-  let currentFilter = 'all';
-  let currentSearch = '';
-  let sortCol = 'createdAt';
-  let sortDir = 'desc';
-  let activeModalDealId = null;
-
-  function showToast(msg) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.add('show');
-    setTimeout(() => t.classList.remove('show'), 2500);
+  // ─── Fetch Firebase config securely from backend ──────────
+  async function getFirebaseConfig() {
+    const res = await fetch('/api/config');
+    if (!res.ok) throw new Error('Failed to load app configuration.');
+    return res.json();
   }
 
   function escapeHTML(str) {
     if (!str) return "";
-    return str.replace(/[&<>"']/g, function(m) {
-      return {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      }[m];
-    });
     return String(str).replace(/[&<>"']/g, m => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[m]));
@@ -349,9 +223,25 @@
     return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
-  // ─── Load ──────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ─── State ─────────────────────────────────────────────────
+  let allDeals = [];
+  let currentFilter = 'all';
+  let currentSearch = '';
+  let sortCol = 'createdAt';
+  let sortDir = 'desc';
+  let activeModalDealId = null;
+  let db = null;
+  let auth = null;
+
+  // ─── Load Deals ────────────────────────────────────────────
   async function loadDeals() {
-    if (!isAdminAuthenticated) return;
     let snapshot;
     try {
       snapshot = await getDocs(collection(db, 'deals'));
@@ -361,7 +251,7 @@
       return;
     }
     allDeals = [];
-    snapshot.forEach(doc => allDeals.push({ id: doc.id, ...doc.data() }));
+    snapshot.forEach(d => allDeals.push({ id: d.id, ...d.data() }));
     document.getElementById('lastUpdated').textContent =
       `Last updated ${new Date().toLocaleTimeString('en-IN')} · ${allDeals.length} total deals`;
     document.getElementById('dealCountLabel').textContent = `${allDeals.length} deals`;
@@ -372,10 +262,10 @@
 
   // ─── Stats ─────────────────────────────────────────────────
   function renderStats() {
-    const statuses = ['pending','active','completed','disputed','expired'];
+    const statuses = ['pending', 'active', 'completed', 'disputed', 'expired'];
     const counts = { total: allDeals.length };
     statuses.forEach(s => counts[s] = allDeals.filter(d => d.status === s).length);
-    const colors = { total:'#1a1a1a', pending:'#856404', active:'#0a3622', completed:'#004085', disputed:'#721c24', expired:'#555' };
+    const colors = { total: '#1a1a1a', pending: '#856404', active: '#0a3622', completed: '#004085', disputed: '#721c24', expired: '#555' };
     document.getElementById('statsBar').innerHTML = Object.entries(counts)
       .map(([key, val]) => `
         <div class="stat-card">
@@ -386,7 +276,7 @@
 
   // ─── Filters ───────────────────────────────────────────────
   function renderFilters() {
-    const filters = ['all','pending','active','completed','disputed','expired'];
+    const filters = ['all', 'pending', 'active', 'completed', 'disputed', 'expired'];
     document.getElementById('filterRow').innerHTML = filters
       .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}</button>`)
       .join('');
@@ -415,34 +305,23 @@
     }
 
     const payBadge = ps => {
-      const map = { unpaid:'pay-unpaid', partial:'pay-partial', paid:'pay-paid' };
-      const label = { unpaid:'Unpaid', partial:'Partial', paid:'Paid' };
-      const cls = map[ps] || 'pay-unpaid';
-      return `<span class="pay-badge ${cls}">${label[ps] || 'Unpaid'}</span>`;
+      const map = { unpaid: 'pay-unpaid', partial: 'pay-partial', paid: 'pay-paid' };
+      const label = { unpaid: 'Unpaid', partial: 'Partial', paid: 'Paid' };
+      return `<span class="pay-badge ${map[ps] || 'pay-unpaid'}">${label[ps] || 'Unpaid'}</span>`;
     };
 
     tbody.innerHTML = deals.map(d => {
       const isDisputed = d.status === 'disputed';
-      const safeWork = (d.workDescription || '');
-      const truncatedWork = safeWork.substring(0, 60) + (safeWork.length > 60 ? '…' : '');
-      const resolvedNote = d.resolutionNote
       const resNote = d.resolutionNote || '';
-      const resolvedNote = d.resolutionNote
+      const resolvedNote = resNote
         ? `<div class="resolution-note">📝 ${escapeHTML(resNote.substring(0, 60))}${resNote.length > 60 ? '…' : ''}</div>`
         : '';
 
       return `<tr>
-        <td>${escapeHTML(d.freelancerName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail) || ''}</span></td>
-        <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
-        ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
-        : '';
-      const safeId = escapeHTML(d.id);
-
-      return `<tr>
         <td>${escapeHTML(d.freelancerName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail || '')}</span></td>
         <td>${escapeHTML(d.clientName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail || '')}</span></td>
-        <td style="max-width:200px">${escapeHTML((d.workDescription||'').substring(0,60))}${(d.workDescription||'').length > 60 ? '…' : ''}</td>
-        <td>₹${(d.paymentAmount||0).toLocaleString('en-IN')}</td>
+        <td style="max-width:200px">${escapeHTML((d.workDescription || '').substring(0, 60))}${(d.workDescription || '').length > 60 ? '…' : ''}</td>
+        <td>₹${(d.paymentAmount || 0).toLocaleString('en-IN')}</td>
         <td>${escapeHTML(formatDate(d.deadline))}</td>
         <td>
           <span class="badge badge-${escapeHTML(d.status)}">${escapeHTML(d.status)}</span>
@@ -458,12 +337,10 @@
       </tr>`;
     }).join('');
 
-    // Resolve button → open modal
     tbody.querySelectorAll('[data-resolve]').forEach(btn => {
-      btn.addEventListener('click', () => openModal(btn.dataset.resolve, 'resolve'));
+      btn.addEventListener('click', () => openModal(btn.dataset.resolve));
     });
 
-    // Flag as disputed
     tbody.querySelectorAll('[data-flag]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.flag;
@@ -508,20 +385,20 @@
   // CSV Export
   document.getElementById('exportBtn').addEventListener('click', () => {
     const deals = getFilteredDeals();
-    const headers = ['ID','Freelancer','Freelancer Email','Client','Client Email','Work','Amount','Deadline','Status','Payment Status','Created','Resolution Note'];
+    const headers = ['ID', 'Freelancer', 'Freelancer Email', 'Client', 'Client Email', 'Work', 'Amount', 'Deadline', 'Status', 'Payment Status', 'Created', 'Resolution Note'];
     const rows = deals.map(d => [
       d.id,
-      `"${d.freelancerName||''}"`,
-      `"${d.freelancerEmail||''}"`,
-      `"${d.clientName||''}"`,
-      `"${d.clientEmail||''}"`,
-      `"${(d.workDescription||'').replace(/"/g,'""')}"`,
+      `"${d.freelancerName || ''}"`,
+      `"${d.freelancerEmail || ''}"`,
+      `"${d.clientName || ''}"`,
+      `"${d.clientEmail || ''}"`,
+      `"${(d.workDescription || '').replace(/"/g, '""')}"`,
       d.paymentAmount || 0,
-      `"${d.deadline||''}"`,
-      `"${d.status||''}"`,
-      `"${d.paymentStatus||'unpaid'}"`,
+      `"${d.deadline || ''}"`,
+      `"${d.status || ''}"`,
+      `"${d.paymentStatus || 'unpaid'}"`,
       `"${d.createdAt ? new Date(d.createdAt).toLocaleDateString('en-IN') : ''}"`,
-      `"${(d.resolutionNote||'').replace(/"/g,'""')}"`
+      `"${(d.resolutionNote || '').replace(/"/g, '""')}"`
     ]);
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -532,13 +409,12 @@
   });
 
   // ─── Dispute Modal ─────────────────────────────────────────
-  function openModal(dealId, mode) {
+  function openModal(dealId) {
     activeModalDealId = dealId;
     const deal = allDeals.find(x => x.id === dealId);
     document.getElementById('modalTitle').textContent = 'Resolve Dispute';
-    // Using textContent here is safe, but we should still be careful with concatenated strings if they were ever used in innerHTML
     document.getElementById('modalMeta').textContent =
-      `${deal?.freelancerName || 'Freelancer'} ↔ ${deal?.clientName || 'Client'} · ${(deal?.workDescription||'').substring(0,60)}`;
+      `${deal?.freelancerName || 'Freelancer'} ↔ ${deal?.clientName || 'Client'} · ${(deal?.workDescription || '').substring(0, 60)}`;
     document.getElementById('resolutionNote').value = deal?.resolutionNote || '';
     document.getElementById('disputeModal').classList.remove('hidden');
   }
@@ -548,7 +424,6 @@
     activeModalDealId = null;
   });
 
-  // Mark Resolved → status: completed
   document.getElementById('modalResolveBtn').addEventListener('click', async () => {
     if (!activeModalDealId) return;
     const note = document.getElementById('resolutionNote').value.trim();
@@ -569,7 +444,6 @@
     }
   });
 
-  // Re-open as Active
   document.getElementById('modalReopenBtn').addEventListener('click', async () => {
     if (!activeModalDealId) return;
     const note = document.getElementById('resolutionNote').value.trim();
@@ -592,13 +466,60 @@
     }
   });
 
-  // Close modal on overlay click
   document.getElementById('disputeModal').addEventListener('click', e => {
     if (e.target === document.getElementById('disputeModal')) {
       document.getElementById('disputeModal').classList.add('hidden');
       activeModalDealId = null;
     }
   });
+
+  document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
+  });
+
+  // ─── Bootstrap: fetch config → init Firebase → auth ──────
+  (async () => {
+    try {
+      const firebaseConfig = await getFirebaseConfig();
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+
+      onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          window.location.href = 'index.html#auth';
+          return;
+        }
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists() && userDoc.data().role === 'admin') {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('adminPanel').classList.add('visible');
+            loadDeals();
+          } else {
+            document.getElementById('loadingBox').classList.add('hidden');
+            document.getElementById('deniedBox').classList.remove('hidden');
+          }
+        } catch (err) {
+          console.error("Error checking admin role:", err);
+          document.getElementById('loadingBox').innerHTML = `
+            <h2 style="color:#c0392b">Error</h2>
+            <p>Could not verify permissions. Please try again later.</p>
+            <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
+          `;
+        }
+      });
+
+    } catch (err) {
+      console.error('Initialization failed:', err);
+      document.getElementById('loadingBox').innerHTML = `
+        <h2 style="color:#c0392b">Error</h2>
+        <p>Failed to load application config. Please refresh or contact support.</p>
+        <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
+      `;
+    }
+  })();
 </script>
 </body>
 </html>

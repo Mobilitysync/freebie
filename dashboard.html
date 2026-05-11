@@ -16,12 +16,12 @@
     </div>
 
     <div class="filter-row">
-      <button class="filter-btn active" onclick="filterDeals('all')">All</button>
-      <button class="filter-btn" onclick="filterDeals('pending')">Pending</button>
-      <button class="filter-btn" onclick="filterDeals('in_progress')">In Progress</button>
-      <button class="filter-btn" onclick="filterDeals('delivered')">Delivered</button>
-      <button class="filter-btn" onclick="filterDeals('completed')">Completed</button>
-      <button class="filter-btn" onclick="filterDeals('disputed')">Disputed</button>
+      <button class="filter-btn active" onclick="filterDeals('all', event)">All</button>
+      <button class="filter-btn" onclick="filterDeals('pending', event)">Pending</button>
+      <button class="filter-btn" onclick="filterDeals('in_progress', event)">In Progress</button>
+      <button class="filter-btn" onclick="filterDeals('delivered', event)">Delivered</button>
+      <button class="filter-btn" onclick="filterDeals('completed', event)">Completed</button>
+      <button class="filter-btn" onclick="filterDeals('disputed', event)">Disputed</button>
     </div>
 
     <div id="loadingMsg"><p>Loading your deals...</p></div>
@@ -34,30 +34,12 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, collection, getDocs, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-  authDomain: "freebie-5762a.firebaseapp.com",
-  projectId: "freebie-5762a",
-  storageBucket: "freebie-5762a.firebasestorage.app",
-  messagingSenderId: "621180509813",
-  appId: "1:621180509813:web:51c7403390e80c91e1a23c",
-  measurementId: "G-PQX9HHGD0J"
-};
+    // ─── Fetch config securely from backend ──────────────────
+    const res = await fetch('/api/config');
+    const firebaseConfig = await res.json();
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
-    function escapeHTML(str) {
-      if (!str) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    let allDeals = [];
 
     function escapeHTML(str) {
       if (!str) return "";
@@ -66,19 +48,17 @@ const firebaseConfig = {
       }[m]));
     }
 
+    let allDeals = [];
+
     async function loadDeals() {
       try {
         const q = query(collection(db, 'deals'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
 
-        allDeals = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        allDeals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         document.getElementById('loadingMsg').classList.add('hidden');
         renderDeals(allDeals);
-
       } catch (err) {
         console.error('Error loading deals:', err);
         document.getElementById('loadingMsg').innerHTML =
@@ -87,7 +67,7 @@ const firebaseConfig = {
     }
 
     function renderDeals(deals) {
-      const list = document.getElementById('dealsList');
+      const list     = document.getElementById('dealsList');
       const emptyMsg = document.getElementById('emptyMsg');
 
       list.innerHTML = '';
@@ -100,15 +80,13 @@ const firebaseConfig = {
       emptyMsg.classList.add('hidden');
 
       deals.forEach(deal => {
+        const statusLabel = escapeHTML(deal.status.replace('_', ' ').toUpperCase());
         const card = document.createElement('div');
         card.className = 'dash-card';
         card.innerHTML = `
           <div class="dash-card-top">
             <div>
-              <span class="deal-badge badge-${escapeHTML(deal.status)}">
-                ${escapeHTML(deal.status).replace('_', ' ').toUpperCase()}
-                ${escapeHTML(deal.status.replace('_', ' ').toUpperCase())}
-              </span>
+              <span class="deal-badge badge-${escapeHTML(deal.status)}">${statusLabel}</span>
               <h3 class="dash-card-title">${escapeHTML(deal.freelancerName)} × ${escapeHTML(deal.clientName)}</h3>
             </div>
             <span class="dash-amount">₹${Number(deal.paymentAmount).toLocaleString('en-IN')}</span>
@@ -128,15 +106,10 @@ const firebaseConfig = {
       });
     }
 
-    window.filterDeals = function(status) {
+    window.filterDeals = function(status, event) {
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
       event.target.classList.add('active');
-
-      if (status === 'all') {
-        renderDeals(allDeals);
-      } else {
-        renderDeals(allDeals.filter(d => d.status === status));
-      }
+      renderDeals(status === 'all' ? allDeals : allDeals.filter(d => d.status === status));
     };
 
     loadDeals();

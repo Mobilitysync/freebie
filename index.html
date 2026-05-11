@@ -9,7 +9,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    /* Landing-specific styles */
     .hero {
       text-align: center;
       padding: 80px 24px 64px;
@@ -257,11 +256,11 @@
   <!-- Navbar -->
   <nav class="navbar">
     <div class="nav-container">
-    <a href="index.html" class="nav-brand">Freebie</a>
-    <div class="nav-right">
-      <a href="#auth" class="btn btn-sm btn-outline">Sign In</a>
+      <a href="index.html" class="nav-brand">Freebie</a>
+      <div class="nav-right">
+        <a href="#auth" class="btn btn-sm btn-outline">Sign In</a>
+      </div>
     </div>
-  </div>
   </nav>
 
   <!-- Hero -->
@@ -388,14 +387,9 @@
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { showError, hideError, friendlyError } from "./ui-utils.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-      authDomain: "freebie-5762a.firebaseapp.com",
-      projectId: "freebie-5762a",
-      storageBucket: "freebie-5762a.firebasestorage.app",
-      messagingSenderId: "621180509813",
-      appId: "1:621180509813:web:51c7403390e80c91e1a23c"
-    };
+    // ─── Fetch config securely from backend ──────────────────
+    const res = await fetch('/api/config');
+    const firebaseConfig = await res.json();
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -443,7 +437,6 @@
     });
 
     // ─── Helpers ──────────────────────────────────────────────
-
     async function redirectUser(user) {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const role = userDoc.exists() ? userDoc.data().role : 'freelancer';
@@ -471,7 +464,6 @@
       $('signinBtn').textContent = 'Signing in...';
       try {
         await signInWithEmailAndPassword(auth, email, pass);
-        // redirect handled by onAuthStateChanged
       } catch (err) {
         showError('siError', friendlyError(err.code));
         $('signinBtn').disabled = false;
@@ -494,7 +486,6 @@
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
         await updateProfile(cred.user, { displayName: name });
         await saveUser(cred.user, selectedRole, name);
-        // redirect handled by onAuthStateChanged
       } catch (err) {
         showError('suError', friendlyError(err.code));
         $('signupBtn').disabled = false;
@@ -512,7 +503,6 @@
         if (!existing.exists()) {
           await saveUser(user, selectedRole, user.displayName);
         }
-        // redirect handled by onAuthStateChanged
       } catch (err) {
         showError('siError', friendlyError(err.code));
         showError('suError', friendlyError(err.code));

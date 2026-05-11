@@ -1,346 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Dashboard | Freebie</title>
-    <link rel="stylesheet" href="style.css">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Client Dashboard - Freebie</title>
-    <link rel="stylesheet" href="style.css" />
-    <style>
-        .stats-bar {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
-        }
-        .stat-pill {
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-        .filter-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 16px;
-        }
-        .filter-btn {
-            padding: 6px 14px;
-            border-radius: 999px;
-            border: 1px solid #ddd;
-            background: #fff;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .filter-btn:hover { border-color: #1a1a1a; }
-        .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
-
-        .search-box {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 16px;
-            outline: none;
-            box-sizing: border-box;
-        }
-        .search-box:focus { border-color: #1a1a1a; }
-
-        .pay-pill {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            margin-top: 6px;
-        }
-        .pay-unpaid  { background: #fff3cd; color: #856404; }
-        .pay-partial { background: #ffe0b2; color: #a05c00; }
-        .pay-paid    { background: #d1e7dd; color: #0a3622; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Dashboard - Freebie</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .pay-pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+    .pay-unpaid  { background: #fff3cd; color: #856404; }
+    .pay-partial { background: #ffe0b2; color: #a05c00; }
+    .pay-paid    { background: #d1e7dd; color: #0a3622; }
+  </style>
 </head>
 <body>
-    <nav class="navbar">
+
+  <nav class="navbar">
     <div class="nav-container">
-        <a href="index.html" class="nav-brand">Freebie</a>
-        <div class="nav-right">
-            <span id="navUserName"></span>
-            <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
-        </div>
+      <a href="index.html" class="nav-brand">Freebie</a>
+      <div class="nav-right">
+        <span id="navUserName"></span>
+        <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+      </div>
     </div>
   </nav>
 
-    <div class="container">
-        <div class="dashboard-header">
-            <h1>Deals Shared With Me</h1>
-        </div>
-
-        <div class="stats-bar" id="statsBar"></div>
-
-        <input type="text" class="search-box" id="searchInput"
-            placeholder="Search by freelancer name or work description..." />
-
-        <div class="filter-row" id="filterRow"></div>
-
-        <div id="dealsList">
-            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
-            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
-            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
-        </div>
+  <div class="container">
+    <div class="dashboard-header">
+      <h1>Deals Shared With Me</h1>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { formatDate, safeText } from "./utils.js";
+    <div class="stats-bar" id="statsBar"></div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-            authDomain: "freebie-5762a.firebaseapp.com",
-            projectId: "freebie-5762a",
-            storageBucket: "freebie-5762a.firebasestorage.app",
-            messagingSenderId: "621180509813",
-            appId: "1:621180509813:web:51c7403390e80c91e1a23c"
-        };
+    <input type="text" class="search-box" id="searchInput"
+      placeholder="Search by freelancer name or work description..." />
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
+    <div class="filter-row" id="filterRow"></div>
 
-        // requestIdleCallback Polyfill for Safari
-        window.requestIdleCallback = window.requestIdleCallback || function (cb) {
-            var start = Date.now();
-            return setTimeout(function () {
-                cb({
-                    didTimeout: false,
-                    timeRemaining: function () {
-                        return Math.max(0, 50 - (Date.now() - start));
-                    }
-                });
-            }, 1);
-        };
-        function escapeHTML(str) {
-            if (!str) return "";
-            return String(str)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
-        }
+    <div id="dealsList">
+      <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+      <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+    </div>
+  </div>
 
-        let allDeals = [];
-        let currentFilter = 'all';
-        let currentSearch = '';
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-        const PAYMENT_LABELS = {
-            unpaid:  { label: '❌ Unpaid',  cls: 'pay-unpaid'  },
-            partial: { label: '🔶 Partial', cls: 'pay-partial' },
-            paid:    { label: '✅ Paid',    cls: 'pay-paid'    }
-        };
+    // ─── Fetch config securely from backend ──────────────────
+    const res = await fetch('/api/config');
+    const firebaseConfig = await res.json();
 
-        const STATUS_CLASS = {
-            agreed: 'status-agreed', expired: 'status-expired',
-            completed: 'status-completed', disputed: 'status-disputed'
-        };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
 
-        const elements = {
-            statsBar: document.getElementById('statsBar'),
-            filterRow: document.getElementById('filterRow'),
-            dealsList: document.getElementById('dealsList'),
-            searchInput: document.getElementById('searchInput'),
-            navUserName: document.getElementById('navUserName')
-        };
+    // requestIdleCallback polyfill for Safari
+    window.requestIdleCallback = window.requestIdleCallback || function (cb) {
+      var start = Date.now();
+      return setTimeout(function () {
+        cb({
+          didTimeout: false,
+          timeRemaining: function () { return Math.max(0, 50 - (Date.now() - start)); }
+        });
+      }, 1);
+    };
 
-        function formatDate(dateStr) {
-            if (!dateStr) return 'No deadline';
-            return new Date(dateStr).toLocaleDateString('en-IN', {
-                day: 'numeric', month: 'short', year: 'numeric'
-            });
-        }
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
 
-        function escapeHTML(str) {
-            if (!str) return "";
-            return String(str).replace(/[&<>"']/g, m => ({
-                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-            }[m]));
-        }
+    function formatDate(dateStr) {
+      if (!dateStr) return 'No deadline';
+      return new Date(dateStr).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      });
+    }
 
-        function safeText(str, limit = 60) {
-            if (!str) return 'Untitled work';
-            const truncated = str.length > limit ? str.substring(0, limit) + '...' : str;
-            return escapeHTML(truncated);
-            const escaped = escapeHTML(str);
-            return escaped.length > limit ? escaped.substring(0, limit) + '...' : escaped;
-        }
+    function safeText(str, limit = 60) {
+      if (!str) return 'Untitled work';
+      const escaped = escapeHTML(str);
+      return escaped.length > limit ? escaped.substring(0, limit) + '…' : escaped;
+    }
 
-        function debounce(fn, delay) {
-            let timeout;
-            return function(...args) {
-                clearTimeout(timeout);
-                timeout = setTimeout(() => fn.apply(this, args), delay);
-            };
-        }
+    function debounce(fn, delay) {
+      let timeout;
+      return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
 
-        function renderStats() {
-            const statuses = ['pending', 'agreed', 'completed', 'disputed', 'expired'];
-            const counts = { total: allDeals.length };
-            statuses.forEach(s => counts[s] = allDeals.filter(d => d.data.status === s).length);
+    let allDeals = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
 
-            const colors = {
-                total: '#1a1a1a', pending: '#856404', agreed: '#0a3622',
-                completed: '#004085', disputed: '#721c24', expired: '#555'
-            };
+    const PAYMENT_LABELS = {
+      unpaid:  { label: '❌ Unpaid',  cls: 'pay-unpaid'  },
+      partial: { label: '🔶 Partial', cls: 'pay-partial' },
+      paid:    { label: '✅ Paid',    cls: 'pay-paid'    }
+    };
 
-            elements.statsBar.innerHTML = Object.entries(counts)
-                .map(([key, val]) => `
-                    <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
-                        ${val} ${escapeHTML(key)}
-                    </span>`
-                ).join('');
-        }
+    const STATUS_CLASS = {
+      agreed: 'status-agreed', expired: 'status-expired',
+      completed: 'status-completed', disputed: 'status-disputed'
+    };
 
-        function renderFilters() {
-            const filters = ['all', 'pending', 'agreed', 'completed', 'disputed', 'expired'];
-            elements.filterRow.innerHTML = filters.map(f => `
-                <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">
-                    ${f.charAt(0).toUpperCase() + f.slice(1)}
-                </button>
-            `).join('');
-        }
+    const elements = {
+      statsBar:    document.getElementById('statsBar'),
+      filterRow:   document.getElementById('filterRow'),
+      dealsList:   document.getElementById('dealsList'),
+      searchInput: document.getElementById('searchInput'),
+      navUserName: document.getElementById('navUserName')
+    };
 
-        function renderDeals() {
-            const q = currentSearch.toLowerCase();
+    function renderStats() {
+      const statuses = ['pending', 'agreed', 'completed', 'disputed', 'expired'];
+      const counts = { total: allDeals.length };
+      statuses.forEach(s => counts[s] = allDeals.filter(d => d.data.status === s).length);
+      const colors = {
+        total: '#1a1a1a', pending: '#856404', agreed: '#0a3622',
+        completed: '#004085', disputed: '#721c24', expired: '#555'
+      };
+      elements.statsBar.innerHTML = Object.entries(counts)
+        .map(([key, val]) => `
+          <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
+            ${val} ${escapeHTML(key)}
+          </span>`
+        ).join('');
+    }
 
-            const filtered = allDeals
-                .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
-                .filter(({ data: d }) => {
-                    if (!q) return true;
-                    return (d.freelancerName || '').toLowerCase().includes(q) ||
-                           (d.workDescription || '').toLowerCase().includes(q);
-                });
+    function renderFilters() {
+      const filters = ['all', 'pending', 'agreed', 'completed', 'disputed', 'expired'];
+      elements.filterRow.innerHTML = filters.map(f => `
+        <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">
+          ${f.charAt(0).toUpperCase() + f.slice(1)}
+        </button>
+      `).join('');
+    }
 
-            if (filtered.length === 0) {
-                elements.dealsList.innerHTML = `<div class="empty-state"><p>No deals match your filter.</p></div>`;
-                return;
-            }
-
-            elements.dealsList.innerHTML = filtered.map(({ id, data: d }) => {
-                const ps = d.paymentStatus || 'unpaid';
-                const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
-                const agreedText = d.clientAgreed ? '✅ You have agreed' : '⏳ Awaiting your agreement';
-                const sc = STATUS_CLASS[d.status] || 'status-pending';
-                const safeId = escapeHTML(id);
-
-                return `
-                <div class="deal-card">
-                    <div class="deal-card-top">
-                        <div>
-                            <h3>${safeText(d.workDescription)}</h3>
-                            <p class="deal-meta">Freelancer: ${d.freelancerName || 'Unknown'}</p>
-                            <p class="deal-meta" style="font-weight:600; color:#1a1a1a;">₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &bull; Due: ${formatDate(d.deadline)}</p>
-                            <p class="deal-meta" style="margin-top:8px;">${agreedText}</p>
-                            <span class="pay-pill ${pay.cls}" style="margin-top:12px;">${pay.label}</span>
-                            <p class="deal-meta">
-                                Freelancer: ${escapeHTML(d.freelancerName) || 'Unknown'}
-                                Freelancer: ${escapeHTML(d.freelancerName || 'Unknown')}
-                                &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
-                                &nbsp;|&nbsp; Due: ${escapeHTML(formatDate(d.deadline))}
-                            </p>
-                            <p class="deal-meta" style="margin-top:4px;">${escapeHTML(agreedText)}</p>
-                            <span class="pay-pill ${pay.cls}">${pay.label}</span>
-                        </div>
-                        <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
-                    </div>
-                    <div class="deal-card-actions">
-                        <a href="deal.html?id=${id}" class="btn btn-primary btn-sm">View & Agree</a>
-                        <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-sm">View & Agree</a>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        elements.filterRow.addEventListener('click', (e) => {
-            const btn = e.target.closest('.filter-btn');
-            if (!btn) return;
-            currentFilter = btn.dataset.filter;
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderDeals();
+    function renderDeals() {
+      const q = currentSearch.toLowerCase();
+      const filtered = allDeals
+        .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
+        .filter(({ data: d }) => {
+          if (!q) return true;
+          return (d.freelancerName || '').toLowerCase().includes(q) ||
+                 (d.workDescription || '').toLowerCase().includes(q);
         });
 
-        onAuthStateChanged(auth, async (user) => {
-            if (!user) { window.location.href = 'index.html'; return; }
+      if (filtered.length === 0) {
+        elements.dealsList.innerHTML = `<div class="empty-state"><p>No deals match your filter.</p></div>`;
+        return;
+      }
 
-            const [userDoc, snapshot] = await Promise.all([
-                getDoc(doc(db, 'users', user.uid)),
-                getDocs(query(collection(db, 'deals'), where('clientEmail', '==', user.email)))
-            ]);
+      elements.dealsList.innerHTML = filtered.map(({ id, data: d }) => {
+        const ps = d.paymentStatus || 'unpaid';
+        const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
+        const agreedText = d.clientAgreed ? '✅ You have agreed' : '⏳ Awaiting your agreement';
+        const sc = STATUS_CLASS[d.status] || 'status-pending';
 
-            if (userDoc.exists() && userDoc.data().role === 'freelancer') {
-                window.location.href = 'freelancer-dashboard.html'; return;
-            }
+        return `
+          <div class="deal-card">
+            <div class="deal-card-top">
+              <div>
+                <h3>${safeText(d.workDescription)}</h3>
+                <p class="deal-meta">Freelancer: ${escapeHTML(d.freelancerName || 'Unknown')}</p>
+                <p class="deal-meta" style="font-weight:600; color:#1a1a1a;">
+                  ₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &bull; Due: ${escapeHTML(formatDate(d.deadline))}
+                </p>
+                <p class="deal-meta" style="margin-top:8px;">${escapeHTML(agreedText)}</p>
+                <span class="pay-pill ${pay.cls}" style="margin-top:12px;">${pay.label}</span>
+              </div>
+              <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
+            </div>
+            <div class="deal-card-actions">
+              <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-primary btn-sm">View & Agree</a>
+            </div>
+          </div>`;
+      }).join('');
+    }
 
-            elements.navUserName.textContent = user.displayName || user.email;
-            allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+    elements.filterRow.addEventListener('click', (e) => {
+      const btn = e.target.closest('.filter-btn');
+      if (!btn) return;
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderDeals();
+    });
 
-            // Auto-expire past-deadline pending deals
-            const batch = writeBatch(db);
-            let hasExpired = false;
-            const now = new Date();
-            allDeals.forEach(({ id, data: d }) => {
-                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
-                    batch.update(doc(db, 'deals', id), { status: 'expired' });
-                    d.status = 'expired';
-                    hasExpired = true;
-                }
-            });
-            if (hasExpired) await batch.commit();
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { window.location.href = 'index.html'; return; }
 
-            if (allDeals.length === 0) {
-                elements.dealsList.innerHTML = `
-                    <div class="empty-state">
-                        <p>No deals shared with you yet.</p>
-                        <p style="font-size:14px; color:#999; margin-top:8px;">Ask your freelancer to share a deal link.</p>
-                    </div>`;
-                return;
-            }
+      const [userDoc, snapshot] = await Promise.all([
+        getDoc(doc(db, 'users', user.uid)),
+        getDocs(query(collection(db, 'deals'), where('clientEmail', '==', user.email)))
+      ]);
 
-            renderStats();
-            renderFilters();
-            renderDeals();
+      if (userDoc.exists() && userDoc.data().role === 'freelancer') {
+        window.location.href = 'freelancer-dashboard.html'; return;
+      }
 
-            requestIdleCallback(async () => {
-                let changed = false;
-                const updates = allDeals.map(async ({ id, data: d }) => {
-                    if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
-                        await updateDoc(doc(db, 'deals', id), { status: 'expired' });
-                        d.status = 'expired';
-                        changed = true;
-                    }
-                });
-                await Promise.all(updates);
-                if (changed) { renderStats(); renderDeals(); }
-            });
+      elements.navUserName.textContent = user.displayName || user.email;
+      allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
 
-            const handleSearch = debounce((e) => {
-                currentSearch = e.target.value.trim();
-                renderDeals();
-            }, 250);
-            elements.searchInput.addEventListener('input', handleSearch);
-        });
+      // Auto-expire past-deadline pending deals
+      const batch = writeBatch(db);
+      let hasExpired = false;
+      const now = new Date();
+      allDeals.forEach(({ id, data: d }) => {
+        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+          batch.update(doc(db, 'deals', id), { status: 'expired' });
+          d.status = 'expired';
+          hasExpired = true;
+        }
+      });
+      if (hasExpired) await batch.commit();
 
-        document.getElementById('navLogoutBtn').addEventListener('click', async () => {
-            await signOut(auth);
-            window.location.href = 'index.html';
-        });
-    </script>
+      if (allDeals.length === 0) {
+        elements.dealsList.innerHTML = `
+          <div class="empty-state">
+            <p>No deals shared with you yet.</p>
+            <p style="font-size:14px; color:#999; margin-top:8px;">Ask your freelancer to share a deal link.</p>
+          </div>`;
+        return;
+      }
+
+      renderStats();
+      renderFilters();
+      renderDeals();
+
+      const handleSearch = debounce((e) => {
+        currentSearch = e.target.value.trim();
+        renderDeals();
+      }, 250);
+      elements.searchInput.addEventListener('input', handleSearch);
+    });
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
 </body>
 </html>

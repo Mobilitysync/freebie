@@ -1,180 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Client Login – Freebie</title>
-    <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Client Login – Freebie</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-    <nav class="navbar">
+  <nav class="navbar">
     <div class="nav-container">
-        <a href="index.html" class="nav-brand">Freebie</a>
-        <div class="nav-right">
-            <span id="navUserName"></span>
-        </div>
+      <a href="index.html" class="nav-brand">Freebie</a>
+      <div class="nav-right">
+        <span id="navUserName"></span>
+      </div>
     </div>
   </nav>
 
-    <div class="container">
+  <div class="container">
 
-        <a href="index.html" class="back-link">← Back</a>
+    <a href="index.html" class="back-link">← Back</a>
 
-        <h1>Client Login</h1>
-        <p class="tagline">View and agree to deals shared with you.</p>
+    <h1>Client Login</h1>
+    <p class="tagline">View and agree to deals shared with you.</p>
 
-        <div class="auth-box">
+    <div class="auth-box">
 
-            <button id="googleBtn" class="btn btn-google">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="Google" />
-                Continue with Google
-            </button>
+      <button id="googleBtn" class="btn btn-google">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+          width="20" height="20" alt="Google" />
+        Continue with Google
+      </button>
 
-            <div class="divider"><span>or</span></div>
+      <div class="divider"><span>or</span></div>
 
-            <form id="emailForm">
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="you@example.com" required />
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Min. 6 characters" required />
-                </div>
-                <div id="nameGroup" class="form-group hidden">
-                    <label for="nameInput">Your Full Name</label>
-                    <input type="text" id="nameInput" placeholder="e.g. Priya Mehta" />
-                </div>
-                <div class="auth-actions" id="authActions">
-                    <button type="button" id="loginBtn" class="btn">Login</button>
-                    <button type="button" id="signupBtn" class="btn btn-outline">Sign Up</button>
-                </div>
-                <div id="createAccountActions" class="auth-actions hidden">
-                    <button type="button" id="createAccountBtn" class="btn">Create Account</button>
-                    <button type="button" id="cancelSignupBtn" class="btn btn-outline">Cancel</button>
-                </div>
-            </form>
-
-            <p id="authError" class="error-msg hidden"></p>
-
+      <form id="emailForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" placeholder="you@example.com" required />
         </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Min. 6 characters" required />
+        </div>
+        <div id="nameGroup" class="form-group hidden">
+          <label for="nameInput">Your Full Name</label>
+          <input type="text" id="nameInput" placeholder="e.g. Priya Mehta" />
+        </div>
+        <div class="auth-actions" id="authActions">
+          <button type="button" id="loginBtn" class="btn">Login</button>
+          <button type="button" id="signupBtn" class="btn btn-outline">Sign Up</button>
+        </div>
+        <div id="createAccountActions" class="auth-actions hidden">
+          <button type="button" id="createAccountBtn" class="btn">Create Account</button>
+          <button type="button" id="cancelSignupBtn" class="btn btn-outline">Cancel</button>
+        </div>
+      </form>
+
+      <p id="authError" class="error-msg hidden"></p>
 
     </div>
+  </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { showError, hideError, friendlyError } from "./ui-utils.js";
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { showError, hideError, friendlyError } from "./ui-utils.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
-            authDomain: "freebie-5762a.firebaseapp.com",
-            projectId: "freebie-5762a",
-            storageBucket: "freebie-5762a.firebasestorage.app",
-            messagingSenderId: "621180509813",
-            appId: "1:621180509813:web:51c7403390e80c91e1a23c"
-        };
+    // ─── Fetch config securely from backend ──────────────────
+    const res = await fetch('/api/config');
+    const firebaseConfig = await res.json();
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
+    const app      = initializeApp(firebaseConfig);
+    const db       = getFirestore(app);
+    const auth     = getAuth(app);
+    const provider = new GoogleAuthProvider();
 
+    async function saveUserRole(user, name = '') {
+      const ref  = doc(db, 'users', user.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          name: name || user.displayName || user.email,
+          email: user.email,
+          role: 'client',
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+      }
+    }
 
-        async function saveUserRole(user, name = '') {
-            const ref = doc(db, 'users', user.uid);
-            const snap = await getDoc(ref);
-            if (!snap.exists()) {
-                await setDoc(ref, {
-                    name: name || user.displayName || user.email,
-                    email: user.email,
-                    role: 'client',
-                    createdAt: new Date().toISOString()
-                }, { merge: true });
-            }
-        }
+    async function handleSuccess(user, name = '') {
+      const ref  = doc(db, 'users', user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists() && snap.data().role !== 'client') {
+        showError('authError', 'This account is registered as a freelancer. Please use freelancer login.');
+        await auth.signOut();
+        return;
+      }
+      await saveUserRole(user, name);
+      const redirect = sessionStorage.getItem('redirectAfterLogin');
+      sessionStorage.removeItem('redirectAfterLogin');
+      window.location.href = redirect || 'client-dashboard.html';
+    }
 
-        async function handleSuccess(user, name = '') {
-            const ref = doc(db, 'users', user.uid);
-            const snap = await getDoc(ref);
-            if (snap.exists() && snap.data().role !== 'client') {
-                showError('authError', 'This account is registered as a freelancer. Please use freelancer login.');
-                await auth.signOut();
-                return;
-            }
-            await saveUserRole(user, name);
-            const redirect = sessionStorage.getItem('redirectAfterLogin');
-            sessionStorage.removeItem('redirectAfterLogin');
-            window.location.href = redirect || 'client-dashboard.html';
-        }
+    document.getElementById('googleBtn').addEventListener('click', async () => {
+      hideError('authError');
+      try {
+        const result = await signInWithPopup(auth, provider);
+        await handleSuccess(result.user);
+      } catch (err) {
+        showError('authError', friendlyError(err.code));
+      }
+    });
 
-        // Google login
-        document.getElementById('googleBtn').addEventListener('click', async () => {
-            hideError('authError');
-            try {
-                const result = await signInWithPopup(auth, provider);
-                await handleSuccess(result.user);
-            } catch (err) {
-                showError('authError', friendlyError(err.code));
-            }
-        });
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      hideError('authError');
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
+      try {
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        await handleSuccess(result.user);
+      } catch (err) {
+        showError('authError', 'Login failed: ' + friendlyError(err.code));
+      }
+    });
 
-        // Email login
-        document.getElementById('loginBtn').addEventListener('click', async () => {
-            hideError('authError');
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
-            try {
-                const result = await signInWithEmailAndPassword(auth, email, password);
-                await handleSuccess(result.user);
-            } catch (err) {
-                showError('authError', 'Login failed: ' + friendlyError(err.code));
-            }
-        });
+    document.getElementById('signupBtn').addEventListener('click', () => {
+      hideError('authError');
+      document.getElementById('nameGroup').classList.remove('hidden');
+      document.getElementById('authActions').classList.add('hidden');
+      document.getElementById('createAccountActions').classList.remove('hidden');
+    });
 
-        // Show name field on Sign Up click
-        document.getElementById('signupBtn').addEventListener('click', () => {
-            hideError('authError');
-            document.getElementById('nameGroup').classList.remove('hidden');
-            document.getElementById('authActions').classList.add('hidden');
-            document.getElementById('createAccountActions').classList.remove('hidden');
-        });
+    document.getElementById('cancelSignupBtn').addEventListener('click', () => {
+      hideError('authError');
+      document.getElementById('nameGroup').classList.add('hidden');
+      document.getElementById('authActions').classList.remove('hidden');
+      document.getElementById('createAccountActions').classList.add('hidden');
+    });
 
-        // Cancel signup
-        document.getElementById('cancelSignupBtn').addEventListener('click', () => {
-            hideError('authError');
-            document.getElementById('nameGroup').classList.add('hidden');
-            document.getElementById('authActions').classList.remove('hidden');
-            document.getElementById('createAccountActions').classList.add('hidden');
-        });
-
-        // Create account
-        document.getElementById('createAccountBtn').addEventListener('click', async () => {
-            hideError('authError');
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            const name = document.getElementById('nameInput').value.trim();
-            if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
-            if (!name) { showError('authError', 'Enter your full name.'); return; }
-            try {
-                const result = await createUserWithEmailAndPassword(auth, email, password);
-                await setDoc(doc(db, 'users', result.user.uid), {
-                    name,
-                    email: result.user.email,
-                    role: 'client',
-                    createdAt: new Date().toISOString()
-                }, { merge: true });
-                const redirect = sessionStorage.getItem('redirectAfterLogin');
-                sessionStorage.removeItem('redirectAfterLogin');
-                window.location.href = redirect || 'client-dashboard.html';
-            } catch (err) {
-                showError('authError', 'Signup failed: ' + friendlyError(err.code));
-            }
-        });
-    </script>
+    document.getElementById('createAccountBtn').addEventListener('click', async () => {
+      hideError('authError');
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const name     = document.getElementById('nameInput').value.trim();
+      if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
+      if (!name)                { showError('authError', 'Enter your full name.'); return; }
+      try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', result.user.uid), {
+          name,
+          email: result.user.email,
+          role: 'client',
+          createdAt: new Date().toISOString()
+        }, { merge: true });
+        const redirect = sessionStorage.getItem('redirectAfterLogin');
+        sessionStorage.removeItem('redirectAfterLogin');
+        window.location.href = redirect || 'client-dashboard.html';
+      } catch (err) {
+        showError('authError', 'Signup failed: ' + friendlyError(err.code));
+      }
+    });
+  </script>
 
 </body>
 </html>

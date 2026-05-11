@@ -2,9 +2,10 @@
   "name": "freebie",
   "version": "1.0.0",
   "description": "A simple freelance deal tracker to simplify and streamline freelancer-client collaboration.",
-  "main": "app.js",
+  "main": "server.js",
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "test": "node --test"
   },
   "repository": {
