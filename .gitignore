@@ -1,2 +1,11 @@
-# Google App Engine generated folder
-appengine-generated/
+node_modules/
+.env
+server.log
+
+node_modules/
+.env
+server.log
+
+node_modules/
+.env
+server.log
