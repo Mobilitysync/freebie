@@ -364,6 +364,7 @@
       GoogleAuthProvider, signInWithPopup
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { showError, hideError, friendlyError } from "./ui-utils.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -416,28 +417,6 @@
     });
 
     // ─── Helpers ──────────────────────────────────────────────
-    function showError(id, msg) {
-      const el = $(id);
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
-    function clearErrors() {
-      ['siError','suError'].forEach(id => { $(id).style.display = 'none'; });
-    }
-
-    function friendlyError(code) {
-      const map = {
-        'auth/user-not-found':      'No account found with this email.',
-        'auth/wrong-password':      'Incorrect password.',
-        'auth/invalid-credential':  'Incorrect email or password.',
-        'auth/email-already-in-use':'An account with this email already exists.',
-        'auth/weak-password':       'Password must be at least 6 characters.',
-        'auth/invalid-email':       'Please enter a valid email address.',
-        'auth/too-many-requests':   'Too many attempts. Try again in a few minutes.',
-        'auth/popup-closed-by-user':'Google sign-in was cancelled.'
-      };
-      return map[code] || 'Something went wrong. Please try again.';
-    }
 
     async function redirectUser(user) {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
@@ -458,7 +437,7 @@
 
     // ─── Sign In ──────────────────────────────────────────────
     $('signinBtn').addEventListener('click', async () => {
-      clearErrors();
+      ['siError','suError'].forEach(hideError);
       const email = $('siEmail').value.trim();
       const pass  = $('siPassword').value;
       if (!email || !pass) { showError('siError', 'Please fill in both fields.'); return; }
@@ -476,7 +455,7 @@
 
     // ─── Sign Up ──────────────────────────────────────────────
     $('signupBtn').addEventListener('click', async () => {
-      clearErrors();
+      ['siError','suError'].forEach(hideError);
       const name  = $('suName').value.trim();
       const email = $('suEmail').value.trim();
       const pass  = $('suPassword').value;
@@ -499,7 +478,7 @@
 
     // ─── Google ───────────────────────────────────────────────
     async function googleAuth() {
-      clearErrors();
+      ['siError','suError'].forEach(hideError);
       try {
         const result = await signInWithPopup(auth, googleProvider);
         const user = result.user;
