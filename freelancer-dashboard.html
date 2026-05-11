@@ -1,10 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freelancer Dashboard | Freebie</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <a href="index.html" class="nav-brand">Freebie</a>
+        <div class="nav-right">
+            <span id="navUserName"></span>
+            <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>My Deals</h1>
+            <a href="create.html" class="btn btn-primary">+ Create New Deal</a>
+        </div>
+
+        <div class="stats-bar" id="statsBar"></div>
+
+        <input type="text" class="search-box" id="searchInput"
+            placeholder="Search by client name or work description..." />
+
+        <div class="filter-row" id="filterRow"></div>
+
+        <div id="dealsList">
+            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line full"></div><div class="skeleton-line short"></div></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+            authDomain: "freebie-5762a.firebaseapp.com",
+            projectId: "freebie-5762a",
+            storageBucket: "freebie-5762a.firebasestorage.app",
+            messagingSenderId: "621180509813",
+            appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // requestIdleCallback Polyfill for Safari
+        window.requestIdleCallback = window.requestIdleCallback || function (cb) {
+            var start = Date.now();
+            return setTimeout(function () {
+                cb({
+                    didTimeout: false,
+                    timeRemaining: function () {
+                        return Math.max(0, 50 - (Date.now() - start));
+                    }
+                });
+            }, 1);
+        };
+
+        let allDeals = [];
+        let currentFilter = 'all';
+        let currentSearch = '';
+
+        const STATUS_CLASS = {
+            agreed: 'status-agreed', expired: 'status-expired',
+            completed: 'status-completed', disputed: 'status-disputed'
+        };
+
+        // Cache DOM elements
+        const elements = {
+            statsBar: document.getElementById('statsBar'),
+            filterRow: document.getElementById('filterRow'),
+            dealsList: document.getElementById('dealsList'),
+            searchInput: document.getElementById('searchInput'),
+            navUserName: document.getElementById('navUserName')
+        };
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'No deadline';
+            return new Date(dateStr).toLocaleDateString('en-IN', {
+                day: 'numeric', month: 'short', year: 'numeric'
+            });
+        }
+
+        function safeText(str, limit = 60) {
+            if (!str) return 'Untitled work';
+            return str.length > limit ? str.substring(0, limit) + '...' : str;
+        }
+
+        function debounce(fn, delay) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
+        function renderStats() {
+            const statuses = ['pending', 'agreed', 'completed', 'disputed', 'expired'];
+            const counts = { total: allDeals.length };
+            statuses.forEach(s => counts[s] = allDeals.filter(d => d.data.status === s).length);
+
+            const colors = {
+                total: '#1a1a1a', pending: '#856404', agreed: '#0a3622',
+                completed: '#004085', disputed: '#721c24', expired: '#555'
+            };
+
+            elements.statsBar.innerHTML = Object.entries(counts)
+                .map(([key, val]) => `
+                    <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
+                        ${val} ${key}
+                    </span>`
+                ).join('');
+        }
+
+        function renderFilters() {
+            const filters = ['all', 'pending', 'agreed', 'completed', 'disputed', 'expired'];
+            elements.filterRow.innerHTML = filters.map(f => `
+                <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">
+                    ${f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+            `).join('');
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Freelancer Dashboard - Freebie</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="style.css" />
   <style>
     .toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -58,11 +186,13 @@
 </head>
 <body>
   <nav class="navbar">
+    <div class="nav-container">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
       <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
+  </div>
   </nav>
 
   <div class="container">
@@ -83,9 +213,9 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { formatDate, safeText } from "./utils.js";
+    import { payPillHTML, PAYMENT_LABELS } from "./utils.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -100,15 +230,19 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     let allDeals = [];
     let currentFilter = 'all';
     let currentSearch = '';
-
-    const PAYMENT_LABELS = {
-      unpaid:  { label: 'Unpaid',  cls: 'pay-unpaid'  },
-      partial: { label: 'Partial', cls: 'pay-partial' },
-      paid:    { label: 'Paid',    cls: 'pay-paid'    }
-    };
 
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -117,13 +251,37 @@
       setTimeout(() => t.classList.remove('show'), 2500);
     }
 
-    function getDealURL(id) {
-      return `${window.location.origin}/deal.html?id=${id}`;
+    function formatDate(dateStr) {
+      if (!dateStr) return 'No deadline';
+      return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    function payPillHTML(status) {
-      const p = PAYMENT_LABELS[status] || PAYMENT_LABELS.unpaid;
-      return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
+    function escapeHTML(str) {
+      if (!str) return "";
+      return str.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m];
+      });
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
+    function safeText(str, limit = 60) {
+      if (!str) return 'Untitled work';
+      const truncated = str.length > limit ? str.substring(0, limit) + '…' : str;
+      return escapeHTML(truncated);
+      const escaped = escapeHTML(str);
+      return escaped.length > limit ? escaped.substring(0, limit) + '…' : escaped;
+    }
+
+    function getDealURL(id) {
+      return `${window.location.origin}/deal.html?id=${id}`;
     }
 
     function renderStats() {
@@ -132,14 +290,14 @@
       statuses.forEach(s => counts[s] = allDeals.filter(({ data: d }) => d.status === s).length);
       const colors = { total:'#1a1a1a', pending:'#856404', active:'#0a3622', completed:'#004085', disputed:'#721c24', expired:'#555' };
       document.getElementById('statsBar').innerHTML = Object.entries(counts)
-        .map(([key, val]) => `<span class="stat-pill" style="background:${colors[key]}18;color:${colors[key]}">${val} ${key}</span>`)
+        .map(([key, val]) => `<span class="stat-pill" style="background:${colors[key]}18;color:${colors[key]}">${val} ${escapeHTML(key)}</span>`)
         .join('');
     }
 
     function renderFilters() {
       const filters = ['all','pending','active','completed','disputed','expired'];
       document.getElementById('filterRow').innerHTML = filters
-        .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</button>`)
+        .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}</button>`)
         .join('');
       document.querySelectorAll('.filter-btn').forEach(btn =>
         btn.addEventListener('click', () => {
@@ -173,6 +331,7 @@
         const ps = d.paymentStatus || 'unpaid';
         const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
         const canUpdatePay = d.status === 'active' || d.status === 'completed';
+        const safeId = escapeHTML(id);
 
         return `
           <div class="deal-card">
@@ -180,29 +339,30 @@
               <div>
                 <h3>${safeText(d.workDescription)}</h3>
                 <p class="deal-meta">
-                  Client: ${d.clientName || 'Unknown'} &nbsp;&nbsp;
+                  Client: ${escapeHTML(d.clientName) || 'Unknown'} &nbsp;&nbsp;
+                  Client: ${escapeHTML(d.clientName || 'Unknown')} &nbsp;&nbsp;
                   ₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &nbsp;&nbsp;
-                  Due: ${formatDate(d.deadline)}
+                  Due: ${escapeHTML(formatDate(d.deadline))}
                 </p>
                 <div style="margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <span id="pay-pill-${id}" class="pay-pill ${pay.cls}">${pay.label}</span>
+                  <span id="pay-pill-${safeId}" class="pay-pill ${pay.cls}">${pay.label}</span>
                   ${canUpdatePay ? `
                   <div class="pay-controls">
-                    <select id="pay-sel-${id}">
+                    <select id="pay-sel-${safeId}">
                       <option value="unpaid" ${ps==='unpaid'?'selected':''}>Unpaid</option>
                       <option value="partial" ${ps==='partial'?'selected':''}>Partial</option>
                       <option value="paid" ${ps==='paid'?'selected':''}>Paid</option>
                     </select>
-                    <button class="btn-pay" data-payid="${id}">Update</button>
+                    <button class="btn-pay" data-payid="${safeId}">Update</button>
                   </div>` : ''}
                 </div>
               </div>
-              <span class="status-badge ${statusClass(d.status)}">${d.status}</span>
+              <span class="status-badge ${statusClass(d.status)}">${escapeHTML(d.status)}</span>
             </div>
             <div class="deal-card-actions">
-              <a href="deal.html?id=${id}" class="btn btn-outline btn-sm">View Deal</a>
-              <button class="btn btn-sm" data-copy="${id}">Copy Link</button>
-              <button class="btn btn-whatsapp btn-sm" data-whatsapp="${id}">WhatsApp</button>
+              <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-outline btn-sm">View Deal</a>
+              <button class="btn btn-sm" data-copy="${escapeHTML(id)}">Copy Link</button>
+              <button class="btn btn-whatsapp btn-sm" data-whatsapp="${escapeHTML(id)}">WhatsApp</button>
             </div>
           </div>`;
       }).join('');
@@ -243,39 +403,165 @@
           navigator.clipboard.writeText(getDealURL(copyBtn.dataset.copy));
           showToast('Link copied!');
         }
-        if (waBtn) {
-          const url = getDealURL(waBtn.dataset.whatsapp);
-          window.open(`https://wa.me/?text=${encodeURIComponent('Hi! Review our deal: ' + url)}`, '_blank', 'once');
+
+        function renderDeals() {
+            const q = currentSearch.toLowerCase();
+
+            const filtered = allDeals
+                .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
+                .filter(({ data: d }) => {
+                    if (!q) return true;
+                    return (d.clientName || '').toLowerCase().includes(q) ||
+                           (d.workDescription || '').toLowerCase().includes(q);
+                });
+
+            if (filtered.length === 0) {
+                elements.dealsList.innerHTML = `<div class="empty-state"><p>No deals found.</p></div>`;
+                return;
+            }
+
+            elements.dealsList.innerHTML = filtered.map(({ id, data: d }) => {
+                const sc = STATUS_CLASS[d.status] || 'status-pending';
+                const ps = d.paymentStatus || 'unpaid';
+                const dealUrl = `${window.location.origin}/deal.html?id=${id}`;
+                return `
+                <div class="deal-card">
+                    <div class="deal-card-top">
+                        <div>
+                            <h3>${safeText(d.workDescription)}</h3>
+                            <p class="deal-meta">Client: ${d.clientName || d.clientEmail}</p>
+                            <p class="deal-meta" style="font-weight:600; color:#1a1a1a;">₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &bull; Due: ${formatDate(d.deadline)}</p>
+                            <select class="payment-select" data-id="${id}">
+                                <option value="unpaid" ${ps === 'unpaid' ? 'selected' : ''}>❌ Unpaid</option>
+                                <option value="partial" ${ps === 'partial' ? 'selected' : ''}>🔶 Partial</option>
+                                <option value="paid" ${ps === 'paid' ? 'selected' : ''}>✅ Paid</option>
+                            </select>
+                        </div>
+                        <span class="status-badge ${sc}">${d.status}</span>
+                    </div>
+                    <div class="deal-card-actions">
+                        <button class="btn btn-outline btn-sm copy-btn" data-url="${dealUrl}">Copy Link</button>
+                        <button class="btn btn-whatsapp btn-sm whatsapp-btn" data-url="${dealUrl}">WhatsApp</button>
+                        <a href="deal.html?id=${id}" class="btn btn-primary btn-sm">View</a>
+                    </div>
+                </div>`;
+            }).join('');
         }
-      }, { once: false });
-    }
 
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) { window.location.href = 'index.html'; return; }
+        elements.filterRow.addEventListener('click', (e) => {
+            const btn = e.target.closest('.filter-btn');
+            if (!btn) return;
+            currentFilter = btn.dataset.filter;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderDeals();
+        });
 
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (userDoc.exists() && userDoc.data().role === 'client') {
-        window.location.href = 'client-dashboard.html';
-        return;
-      }
+        elements.dealsList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('copy-btn')) {
+                await navigator.clipboard.writeText(e.target.dataset.url);
+                const originalText = e.target.textContent;
+                e.target.textContent = 'Copied!';
+                setTimeout(() => e.target.textContent = originalText, 2000);
+            }
+            if (e.target.classList.contains('whatsapp-btn')) {
+                const msg = `Hi! Please review and agree to our deal on Freebie: ${e.target.dataset.url}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+        });
 
-      document.getElementById('navUserName').textContent = user.displayName || user.email;
+        elements.dealsList.addEventListener('change', async (e) => {
+            if (e.target.classList.contains('payment-select')) {
+                const id = e.target.dataset.id;
+                const status = e.target.value;
+                await updateDoc(doc(db, 'deals', id), { paymentStatus: status });
+                const deal = allDeals.find(d => d.id === id);
+                if (deal) deal.data.paymentStatus = status;
+            }
+        });
 
-      const q = query(collection(db, 'deals'), where('freelancerEmail', '==', user.email));
-      const snapshot = await getDocs(q);
-      allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) { window.location.href = 'index.html'; return; }
+
+            const [userDoc, snapshot] = await Promise.all([
+                getDoc(doc(db, 'users', user.uid)),
+                getDocs(query(collection(db, 'deals'), where('freelancerEmail', '==', user.email)))
+            ]);
+
+            if (userDoc.exists() && userDoc.data().role === 'client') {
+                window.location.href = 'client-dashboard.html'; return;
+            }
+
+            elements.navUserName.textContent = user.displayName || user.email;
+            allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+
+            renderStats();
+            renderFilters();
+            renderDeals();
 
       // Auto-expire past-deadline pending deals
-      await Promise.all(allDeals.map(async ({ id, data: d }) => {
+      const batch = writeBatch(db);
+      let hasUpdates = false;
+
+      allDeals.forEach(({ id, data: d }) => {
+        const updates = {};
         if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
-          await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+            requestIdleCallback(async () => {
+                let changed = false;
+                const updates = allDeals.map(async ({ id, data: d }) => {
+                    if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
+                        await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+                        d.status = 'expired';
+                        changed = true;
+                    }
+                });
+                await Promise.all(updates);
+                if (changed) { renderStats(); renderDeals(); }
+            });
+
+            const handleSearch = debounce((e) => {
+                currentSearch = e.target.value.trim();
+                renderDeals();
+            }, 250);
+            elements.searchInput.addEventListener('input', handleSearch);
+        });
+
+        document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+            await signOut(auth);
+            window.location.href = 'index.html';
+        });
+    </script>
+      // Auto-expire past-deadline pending deals & initialize paymentStatus
+      const batch = writeBatch(db);
+      let needsCommit = false;
+      const now = new Date();
+      allDeals.forEach(({ id, data: d }) => {
+        let changed = false;
+        const updates = {};
+        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+          updates.status = 'expired';
           d.status = 'expired';
+          changed = true;
         }
         if (!d.paymentStatus) {
-          await updateDoc(doc(db, 'deals', id), { paymentStatus: 'unpaid' });
+          updates.paymentStatus = 'unpaid';
           d.paymentStatus = 'unpaid';
+          changed = true;
         }
-      }));
+        if (changed) {
+          batch.update(doc(db, 'deals', id), updates);
+          needsCommit = true;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          batch.update(doc(db, 'deals', id), updates);
+          hasUpdates = true;
+        }
+      });
+
+      if (hasUpdates) await batch.commit();
+      });
+      if (needsCommit) await batch.commit();
 
       if (allDeals.length === 0) {
         document.getElementById('dealsList').innerHTML = `

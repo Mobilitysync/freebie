@@ -1,21 +1,15 @@
-export function formatCurrency(amount) {
-  if (!amount) return '₹0';
-  return '₹' + Number(amount).toLocaleString('en-IN');
-}
+export const PAYMENT_LABELS = {
+  unpaid:  { label: 'Unpaid',  cls: 'pay-unpaid'  },
+  partial: { label: 'Partial', cls: 'pay-partial' },
+  paid:    { label: 'Paid',    cls: 'pay-paid'    }
+};
 
-export function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  const datePart = dateStr.split('T')[0];
-  const parts = datePart.split('-');
-  if (parts.length !== 3) return dateStr;
-  const [y, m, d] = parts;
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const monthIndex = parseInt(m, 10) - 1;
-  if (monthIndex < 0 || monthIndex > 11) return dateStr;
-  return `${parseInt(d, 10)} ${months[monthIndex]} ${y}`;
-}
-
-export function safeText(str, limit = 60) {
-  if (!str) return 'Untitled work';
-  return str.length > limit ? str.substring(0, limit) + '...' : str;
+/**
+ * Returns the HTML for a payment status pill.
+ * @param {string} status - The payment status (unpaid, partial, paid).
+ * @returns {string} HTML string for the pill.
+ */
+export function payPillHTML(status) {
+  const p = PAYMENT_LABELS[status] || PAYMENT_LABELS.unpaid;
+  return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
 }
