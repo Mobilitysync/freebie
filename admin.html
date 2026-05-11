@@ -264,6 +264,19 @@
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
+  function escapeHTML(str) {
+    if (!str) return "";
+    return str.replace(/[&<>"']/g, function(m) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m];
+    });
+  }
+
   function formatDate(str) {
     if (!str) return '—';
     return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -292,7 +305,7 @@
       .map(([key, val]) => `
         <div class="stat-card">
           <div class="stat-number" style="color:${colors[key]}">${val}</div>
-          <div class="stat-label">${key}</div>
+          <div class="stat-label">${escapeHTML(key)}</div>
         </div>`).join('');
   }
 
@@ -300,7 +313,7 @@
   function renderFilters() {
     const filters = ['all','pending','active','completed','disputed','expired'];
     document.getElementById('filterRow').innerHTML = filters
-      .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</button>`)
+      .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}</button>`)
       .join('');
     document.querySelectorAll('.filter-btn').forEach(btn =>
       btn.addEventListener('click', () => {
@@ -350,26 +363,29 @@
 
     tbody.innerHTML = deals.map(d => {
       const isDisputed = d.status === 'disputed';
+      const safeWork = (d.workDescription || '');
+      const truncatedWork = safeWork.substring(0, 60) + (safeWork.length > 60 ? '…' : '');
       const resolvedNote = d.resolutionNote
-        ? `<div class="resolution-note">📝 ${d.resolutionNote.substring(0, 60)}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
+        ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
         : '';
+      const safeId = escapeHTML(d.id);
 
       return `<tr>
-        <td>${d.freelancerName || '—'}<br><span style="font-size:12px;color:#999">${d.freelancerEmail || ''}</span></td>
-        <td>${d.clientName || '—'}<br><span style="font-size:12px;color:#999">${d.clientEmail || ''}</span></td>
-        <td style="max-width:200px">${(d.workDescription||'').substring(0,60)}${(d.workDescription||'').length > 60 ? '…' : ''}</td>
+        <td>${escapeHTML(d.freelancerName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail) || ''}</span></td>
+        <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
+        <td style="max-width:200px">${escapeHTML(truncatedWork)}</td>
         <td>₹${(d.paymentAmount||0).toLocaleString('en-IN')}</td>
         <td>${formatDate(d.deadline)}</td>
         <td>
-          <span class="badge badge-${d.status}">${d.status}</span>
+          <span class="badge badge-${escapeHTML(d.status)}">${escapeHTML(d.status)}</span>
           ${resolvedNote}
         </td>
         <td>${payBadge(d.paymentStatus || 'unpaid')}</td>
         <td>${formatDate(d.createdAt)}</td>
         <td>
-          <a href="deal.html?id=${d.id}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
-          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${d.id}">Resolve</button>` : ''}
-          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${d.id}">Flag Dispute</button>` : ''}
+          <a href="deal.html?id=${safeId}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
+          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${safeId}">Resolve</button>` : ''}
+          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${safeId}">Flag Dispute</button>` : ''}
         </td>
       </tr>`;
     }).join('');
@@ -452,6 +468,7 @@
     activeModalDealId = dealId;
     const deal = allDeals.find(x => x.id === dealId);
     document.getElementById('modalTitle').textContent = 'Resolve Dispute';
+    // Using textContent here is safe, but we should still be careful with concatenated strings if they were ever used in innerHTML
     document.getElementById('modalMeta').textContent =
       `${deal?.freelancerName || 'Freelancer'} ↔ ${deal?.clientName || 'Client'} · ${(deal?.workDescription||'').substring(0,60)}`;
     document.getElementById('resolutionNote').value = deal?.resolutionNote || '';

@@ -127,9 +127,23 @@
             });
         }
 
+        function escapeHTML(str) {
+            if (!str) return "";
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[m];
+            });
+        }
+
         function safeText(str, limit = 60) {
             if (!str) return 'Untitled work';
-            return str.length > limit ? str.substring(0, limit) + '...' : str;
+            const truncated = str.length > limit ? str.substring(0, limit) + '...' : str;
+            return escapeHTML(truncated);
         }
 
         function renderStats() {
@@ -145,7 +159,7 @@
             document.getElementById('statsBar').innerHTML = Object.entries(counts)
                 .map(([key, val]) => `
                     <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
-                        ${val} ${key}
+                        ${val} ${escapeHTML(key)}
                     </span>`
                 ).join('');
         }
@@ -153,8 +167,8 @@
         function renderFilters() {
             const filters = ['all', 'pending', 'agreed', 'completed', 'disputed', 'expired'];
             document.getElementById('filterRow').innerHTML = filters.map(f => `
-                <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">
-                    ${f.charAt(0).toUpperCase() + f.slice(1)}
+                <button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">
+                    ${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}
                 </button>
             `).join('');
 
@@ -190,6 +204,7 @@
                 const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
                 const agreedText = d.clientAgreed ? '✅ You have agreed' : '⏳ Awaiting your agreement';
                 const sc = STATUS_CLASS[d.status] || 'status-pending';
+                const safeId = escapeHTML(id);
 
                 return `
                 <div class="deal-card">
@@ -197,17 +212,17 @@
                         <div>
                             <h3>${safeText(d.workDescription)}</h3>
                             <p class="deal-meta">
-                                Freelancer: ${d.freelancerName || 'Unknown'}
+                                Freelancer: ${escapeHTML(d.freelancerName) || 'Unknown'}
                                 &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
                                 &nbsp;|&nbsp; Due: ${formatDate(d.deadline)}
                             </p>
                             <p class="deal-meta" style="margin-top:4px;">${agreedText}</p>
                             <span class="pay-pill ${pay.cls}">${pay.label}</span>
                         </div>
-                        <span class="status-badge ${sc}">${d.status}</span>
+                        <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
                     </div>
                     <div class="deal-card-actions">
-                        <a href="deal.html?id=${id}" class="btn btn-sm">View & Agree</a>
+                        <a href="deal.html?id=${safeId}" class="btn btn-sm">View & Agree</a>
                     </div>
                 </div>`;
             }).join('');
