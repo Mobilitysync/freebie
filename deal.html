@@ -223,17 +223,6 @@
     let dealData = null;
 
     // ─── Helpers ───────────────────────────────────────────────
-    function formatCurrency(amount) {
-      return '₹' + Number(amount).toLocaleString('en-IN');
-    }
-
-    function formatDate(dateStr) {
-      if (!dateStr) return '—';
-      const [y, m, d] = dateStr.split('-');
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return `${d} ${months[parseInt(m,10)-1]} ${y}`;
-    }
-
     function showDealError(msg) {
       const el = document.getElementById('dealError');
       el.textContent = msg;
