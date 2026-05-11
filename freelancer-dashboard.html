@@ -258,6 +258,15 @@
 
     function escapeHTML(str) {
       if (!str) return "";
+      return str.replace(/[&<>"']/g, function(m) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[m];
+      });
       return String(str).replace(/[&<>"']/g, m => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
       }[m]));
@@ -281,14 +290,14 @@
       statuses.forEach(s => counts[s] = allDeals.filter(({ data: d }) => d.status === s).length);
       const colors = { total:'#1a1a1a', pending:'#856404', active:'#0a3622', completed:'#004085', disputed:'#721c24', expired:'#555' };
       document.getElementById('statsBar').innerHTML = Object.entries(counts)
-        .map(([key, val]) => `<span class="stat-pill" style="background:${colors[key]}18;color:${colors[key]}">${val} ${key}</span>`)
+        .map(([key, val]) => `<span class="stat-pill" style="background:${colors[key]}18;color:${colors[key]}">${val} ${escapeHTML(key)}</span>`)
         .join('');
     }
 
     function renderFilters() {
       const filters = ['all','pending','active','completed','disputed','expired'];
       document.getElementById('filterRow').innerHTML = filters
-        .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</button>`)
+        .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}</button>`)
         .join('');
       document.querySelectorAll('.filter-btn').forEach(btn =>
         btn.addEventListener('click', () => {
@@ -322,6 +331,7 @@
         const ps = d.paymentStatus || 'unpaid';
         const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
         const canUpdatePay = d.status === 'active' || d.status === 'completed';
+        const safeId = escapeHTML(id);
 
         return `
           <div class="deal-card">
@@ -335,15 +345,15 @@
                   Due: ${escapeHTML(formatDate(d.deadline))}
                 </p>
                 <div style="margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <span id="pay-pill-${id}" class="pay-pill ${pay.cls}">${pay.label}</span>
+                  <span id="pay-pill-${safeId}" class="pay-pill ${pay.cls}">${pay.label}</span>
                   ${canUpdatePay ? `
                   <div class="pay-controls">
-                    <select id="pay-sel-${id}">
+                    <select id="pay-sel-${safeId}">
                       <option value="unpaid" ${ps==='unpaid'?'selected':''}>Unpaid</option>
                       <option value="partial" ${ps==='partial'?'selected':''}>Partial</option>
                       <option value="paid" ${ps==='paid'?'selected':''}>Paid</option>
                     </select>
-                    <button class="btn-pay" data-payid="${id}">Update</button>
+                    <button class="btn-pay" data-payid="${safeId}">Update</button>
                   </div>` : ''}
                 </div>
               </div>

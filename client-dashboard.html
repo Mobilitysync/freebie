@@ -201,7 +201,7 @@
             elements.statsBar.innerHTML = Object.entries(counts)
                 .map(([key, val]) => `
                     <span class="stat-pill" style="background:${colors[key]}15; color:${colors[key]}">
-                        ${val} ${key}
+                        ${val} ${escapeHTML(key)}
                     </span>`
                 ).join('');
         }
@@ -236,6 +236,7 @@
                 const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
                 const agreedText = d.clientAgreed ? '✅ You have agreed' : '⏳ Awaiting your agreement';
                 const sc = STATUS_CLASS[d.status] || 'status-pending';
+                const safeId = escapeHTML(id);
 
                 return `
                 <div class="deal-card">

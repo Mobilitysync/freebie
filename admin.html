@@ -338,6 +338,15 @@
 
   function escapeHTML(str) {
     if (!str) return "";
+    return str.replace(/[&<>"']/g, function(m) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[m];
+    });
     return String(str).replace(/[&<>"']/g, m => ({
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
     }[m]));
@@ -379,7 +388,7 @@
       .map(([key, val]) => `
         <div class="stat-card">
           <div class="stat-number" style="color:${colors[key]}">${val}</div>
-          <div class="stat-label">${key}</div>
+          <div class="stat-label">${escapeHTML(key)}</div>
         </div>`).join('');
   }
 
@@ -387,7 +396,7 @@
   function renderFilters() {
     const filters = ['all','pending','active','completed','disputed','expired'];
     document.getElementById('filterRow').innerHTML = filters
-      .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</button>`)
+      .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${escapeHTML(f)}">${escapeHTML(f.charAt(0).toUpperCase() + f.slice(1))}</button>`)
       .join('');
     document.querySelectorAll('.filter-btn').forEach(btn =>
       btn.addEventListener('click', () => {
@@ -422,6 +431,9 @@
 
     tbody.innerHTML = deals.map(d => {
       const isDisputed = d.status === 'disputed';
+      const safeWork = (d.workDescription || '');
+      const truncatedWork = safeWork.substring(0, 60) + (safeWork.length > 60 ? '…' : '');
+      const resolvedNote = d.resolutionNote
       const resNote = d.resolutionNote || '';
       const resolvedNote = d.resolutionNote
         ? `<div class="resolution-note">📝 ${escapeHTML(resNote.substring(0, 60))}${resNote.length > 60 ? '…' : ''}</div>`
@@ -432,6 +444,7 @@
         <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
         ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
         : '';
+      const safeId = escapeHTML(d.id);
 
       return `<tr>
         <td>${escapeHTML(d.freelancerName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail || '')}</span></td>
@@ -531,6 +544,7 @@
     activeModalDealId = dealId;
     const deal = allDeals.find(x => x.id === dealId);
     document.getElementById('modalTitle').textContent = 'Resolve Dispute';
+    // Using textContent here is safe, but we should still be careful with concatenated strings if they were ever used in innerHTML
     document.getElementById('modalMeta').textContent =
       `${deal?.freelancerName || 'Freelancer'} ↔ ${deal?.clientName || 'Client'} · ${(deal?.workDescription||'').substring(0,60)}`;
     document.getElementById('resolutionNote').value = deal?.resolutionNote || '';
