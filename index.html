@@ -387,7 +387,9 @@
       if (!user) return;
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const role = userDoc.exists() ? userDoc.data().role : 'freelancer';
-      window.location.href = role === 'client' ? 'client-dashboard.html' : 'freelancer-dashboard.html';
+      if (role === 'admin') window.location.href = 'admin.html';
+      else if (role === 'client') window.location.href = 'client-dashboard.html';
+      else window.location.href = 'freelancer-dashboard.html';
     });
 
     // ─── Tabs ─────────────────────────────────────────────────
@@ -419,7 +421,9 @@
     async function redirectUser(user) {
       const userDoc = await getDoc(doc(db, 'users', user.uid));
       const role = userDoc.exists() ? userDoc.data().role : 'freelancer';
-      window.location.href = role === 'client' ? 'client-dashboard.html' : 'freelancer-dashboard.html';
+      if (role === 'admin') window.location.href = 'admin.html';
+      else if (role === 'client') window.location.href = 'client-dashboard.html';
+      else window.location.href = 'freelancer-dashboard.html';
     }
 
     async function saveUser(user, role, name) {

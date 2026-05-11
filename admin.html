@@ -6,23 +6,17 @@
   <title>Freebie Admin</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .pin-screen {
+    .auth-screen {
       min-height: 100vh; display: flex; align-items: center;
       justify-content: center; background: #f5f5f5;
     }
-    .pin-box {
+    .auth-box {
       background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
       padding: 40px 32px; width: 100%; max-width: 360px; text-align: center;
     }
-    .pin-box h2 { margin-bottom: 8px; font-size: 22px; }
-    .pin-box p { color: #666; font-size: 14px; margin-bottom: 24px; }
-    .pin-box input {
-      width: 100%; padding: 12px 14px; border: 1px solid #ddd;
-      border-radius: 8px; font-size: 16px; text-align: center;
-      letter-spacing: 4px; margin-bottom: 16px; outline: none;
-    }
-    .pin-box input:focus { border-color: #1a1a1a; }
-    .pin-error { color: #c0392b; font-size: 14px; margin-top: 8px; }
+    .auth-box h2 { margin-bottom: 8px; font-size: 22px; }
+    .auth-box p { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .auth-error { color: #c0392b; font-size: 14px; margin-top: 8px; }
     .admin-panel { display: none; }
     .admin-panel.visible { display: block; }
     .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -128,14 +122,18 @@
 </head>
 <body>
 
-<!-- PIN SCREEN -->
-<div class="pin-screen" id="pinScreen">
-  <div class="pin-box">
-    <h2>Admin Access</h2>
-    <p>Enter your admin PIN to continue</p>
-    <input type="password" id="pinInput" maxlength="20" />
-    <button class="btn" id="pinSubmitBtn" style="width:100%">Enter</button>
-    <p class="pin-error hidden" id="pinError">Incorrect PIN. Try again.</p>
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box" id="loadingBox">
+    <h2>Verifying Access</h2>
+    <p>Please wait while we check your credentials...</p>
+    <div class="spinner"></div>
+  </div>
+
+  <div class="auth-box hidden" id="deniedBox">
+    <h2 style="color:#c0392b">Access Denied</h2>
+    <p>You do not have administrative privileges to access this panel.</p>
+    <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
   </div>
 </div>
 
@@ -202,7 +200,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -215,7 +214,14 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+  const auth = getAuth(app);
 
+  // Auth & Role check
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = 'index.html#auth';
+      return;
+    }
   function escapeHTML(str) {
     if (!str) return "";
     return String(str)
@@ -237,27 +243,30 @@
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
-  let correctHash;
-  hashPin('freebie2026').then(h => { correctHash = h; });
-
-  // PIN gate
-  document.getElementById('pinSubmitBtn').addEventListener('click', async () => {
-    const pin = document.getElementById('pinInput').value;
-    const hash = await hashPin(pin);
-    if (hash === correctHash) {
-      document.getElementById('pinScreen').style.display = 'none';
-      document.getElementById('adminPanel').classList.add('visible');
-      loadDeals();
-    } else {
-      document.getElementById('pinError').classList.remove('hidden');
-      document.getElementById('pinInput').value = '';
-      document.getElementById('pinInput').focus();
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('adminPanel').classList.add('visible');
+        loadDeals();
+      } else {
+        document.getElementById('loadingBox').classList.add('hidden');
+        document.getElementById('deniedBox').classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error("Error checking admin role:", err);
+      document.getElementById('loadingBox').innerHTML = `
+        <h2 style="color:#c0392b">Error</h2>
+        <p>Could not verify permissions. Please try again later.</p>
+        <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
+      `;
     }
   });
-  document.getElementById('pinInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('pinSubmitBtn').click();
+
+  document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
   });
-  document.getElementById('logoutAdminBtn').addEventListener('click', () => { window.location.href = 'index.html'; });
 
   // ─── State ─────────────────────────────────────────────────
   let allDeals = [];
