@@ -41,6 +41,22 @@ body {
   0% { background-position: 0% 0%; }
   50% { background-position: 100% 100%; }
   100% { background-position: 0% 0%; }
+  font-family: Arial, sans-serif;
+  background: linear-gradient(-45deg, #f7f6f2, #f0f7f4, #e8e5e0, #f7f6f2);
+  background-size: 400% 400%;
+  animation: flowingBackground 15s ease infinite;
+  color: #1a1a1a;
+  padding: 40px 20px;
+}
+
+@keyframes flowingBackground {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { animation: none; }
 }
 
 .container {
@@ -77,6 +93,18 @@ h1 {
   position: sticky;
   top: 0;
   z-index: 100;
+  align-items: center;
+  z-index: 100;
+}
+
+.nav-container {
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
 }
 
 .nav-brand {
@@ -287,4 +315,13 @@ h1 {
 
 .success-box {
   margin-top: 24px; background: #f0fff4; border: 1px solid #c3e6cb; padding: 24px; border-radius: 8px; text-align: left;
+}
+
+/* ── UTILITY ── */
+.hidden { display: none; }
+
+/* ── ACCESSIBILITY ── */
+*:focus-visible {
+  outline: 2px solid #01696f;
+  outline-offset: 2px;
 }

@@ -5,15 +5,76 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Dashboard | Freebie</title>
     <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client Dashboard - Freebie</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        .stats-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .stat-pill {
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .filter-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .filter-btn {
+            padding: 6px 14px;
+            border-radius: 999px;
+            border: 1px solid #ddd;
+            background: #fff;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn:hover { border-color: #1a1a1a; }
+        .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:focus { border-color: #1a1a1a; }
+
+        .pay-pill {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+        .pay-unpaid  { background: #fff3cd; color: #856404; }
+        .pay-partial { background: #ffe0b2; color: #a05c00; }
+        .pay-paid    { background: #d1e7dd; color: #0a3622; }
+    </style>
 </head>
 <body>
     <nav class="navbar">
+    <div class="nav-container">
         <a href="index.html" class="nav-brand">Freebie</a>
         <div class="nav-right">
             <span id="navUserName"></span>
             <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
         </div>
-    </nav>
+    </div>
+  </nav>
 
     <div class="container">
         <div class="dashboard-header">
@@ -36,7 +97,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -64,6 +125,15 @@
                 });
             }, 1);
         };
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         let allDeals = [];
         let currentFilter = 'all';
@@ -95,9 +165,19 @@
             });
         }
 
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str).replace(/[&<>"']/g, m => ({
+                "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+            }[m]));
+        }
+
         function safeText(str, limit = 60) {
             if (!str) return 'Untitled work';
-            return str.length > limit ? str.substring(0, limit) + '...' : str;
+            const truncated = str.length > limit ? str.substring(0, limit) + '...' : str;
+            return escapeHTML(truncated);
+            const escaped = escapeHTML(str);
+            return escaped.length > limit ? escaped.substring(0, limit) + '...' : escaped;
         }
 
         function debounce(fn, delay) {
@@ -166,11 +246,20 @@
                             <p class="deal-meta" style="font-weight:600; color:#1a1a1a;">₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &bull; Due: ${formatDate(d.deadline)}</p>
                             <p class="deal-meta" style="margin-top:8px;">${agreedText}</p>
                             <span class="pay-pill ${pay.cls}" style="margin-top:12px;">${pay.label}</span>
+                            <p class="deal-meta">
+                                Freelancer: ${escapeHTML(d.freelancerName) || 'Unknown'}
+                                Freelancer: ${escapeHTML(d.freelancerName || 'Unknown')}
+                                &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
+                                &nbsp;|&nbsp; Due: ${escapeHTML(formatDate(d.deadline))}
+                            </p>
+                            <p class="deal-meta" style="margin-top:4px;">${escapeHTML(agreedText)}</p>
+                            <span class="pay-pill ${pay.cls}">${pay.label}</span>
                         </div>
-                        <span class="status-badge ${sc}">${d.status}</span>
+                        <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
                     </div>
                     <div class="deal-card-actions">
                         <a href="deal.html?id=${id}" class="btn btn-primary btn-sm">View & Agree</a>
+                        <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-sm">View & Agree</a>
                     </div>
                 </div>`;
             }).join('');
@@ -199,6 +288,19 @@
 
             elements.navUserName.textContent = user.displayName || user.email;
             allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
+
+            // Auto-expire past-deadline pending deals
+            const batch = writeBatch(db);
+            let hasExpired = false;
+            const now = new Date();
+            allDeals.forEach(({ id, data: d }) => {
+                if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+                    batch.update(doc(db, 'deals', id), { status: 'expired' });
+                    d.status = 'expired';
+                    hasExpired = true;
+                }
+            });
+            if (hasExpired) await batch.commit();
 
             if (allDeals.length === 0) {
                 elements.dealsList.innerHTML = `

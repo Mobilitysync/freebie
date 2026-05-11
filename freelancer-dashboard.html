@@ -129,6 +129,279 @@
                     ${f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
             `).join('');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Freelancer Dashboard - Freebie</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #1a1a1a; color: #fff; padding: 10px 20px;
+      border-radius: 8px; font-size: 14px; opacity: 0;
+      transition: opacity 0.3s; pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; }
+    .stats-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+    .stat-pill {
+      padding: 6px 14px; border-radius: 999px; font-size: 13px;
+      font-weight: 600; background: #f0f0f0; color: #444;
+    }
+    .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 999px; border: 1px solid #ddd;
+      background: #fff; font-size: 13px; cursor: pointer; transition: all 0.2s;
+    }
+    .filter-btn:hover { border-color: #1a1a1a; }
+    .filter-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .search-box {
+      width: 100%; padding: 10px 14px; border: 1px solid #ddd;
+      border-radius: 8px; font-size: 14px; margin-bottom: 16px;
+      outline: none; box-sizing: border-box;
+    }
+    .search-box:focus { border-color: #1a1a1a; }
+    .pay-pill {
+      display: inline-block; padding: 2px 10px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
+    .pay-unpaid  { background: #fff3cd; color: #856404; }
+    .pay-partial { background: #ffe0b2; color: #a05c00; }
+    .pay-paid    { background: #d1e7dd; color: #0a3622; }
+    .pay-controls {
+      display: flex; gap: 8px; align-items: center;
+      margin-top: 10px; flex-wrap: wrap;
+    }
+    .pay-controls select {
+      padding: 5px 10px; border: 1px solid #ccc; border-radius: 8px;
+      font-size: 13px; background: #fff; cursor: pointer;
+    }
+    .pay-controls select:focus { outline: none; border-color: #01696f; }
+    .pay-controls .btn-pay {
+      padding: 5px 14px; background: #01696f; color: #fff;
+      border: none; border-radius: 8px; font-size: 13px;
+      cursor: pointer; font-weight: 600; transition: background 0.2s;
+    }
+    .pay-controls .btn-pay:hover { background: #0c4e54; }
+    .pay-controls .btn-pay:disabled { background: #aaa; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+    <a href="index.html" class="nav-brand">Freebie</a>
+    <div class="nav-right">
+      <span id="navUserName"></span>
+      <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
+    </div>
+  </div>
+  </nav>
+
+  <div class="container">
+    <div class="dashboard-header">
+      <h1>My Deals</h1>
+      <div class="dashboard-actions">
+        <a href="create.html" class="btn">+ New Deal</a>
+      </div>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+    <input type="text" class="search-box" id="searchInput" placeholder="Search by client name or work description..." />
+    <div class="filter-row" id="filterRow"></div>
+    <div id="dealsList"><p class="loading-msg">Loading your deals...</p></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
+      authDomain: "freebie-5762a.firebaseapp.com",
+      projectId: "freebie-5762a",
+      storageBucket: "freebie-5762a.firebasestorage.app",
+      messagingSenderId: "621180509813",
+      appId: "1:621180509813:web:51c7403390e80c91e1a23c"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    let allDeals = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    const PAYMENT_LABELS = {
+      unpaid:  { label: 'Unpaid',  cls: 'pay-unpaid'  },
+      partial: { label: 'Partial', cls: 'pay-partial' },
+      paid:    { label: 'Paid',    cls: 'pay-paid'    }
+    };
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'No deadline';
+      return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
+    function safeText(str, limit = 60) {
+      if (!str) return 'Untitled work';
+      const truncated = str.length > limit ? str.substring(0, limit) + '…' : str;
+      return escapeHTML(truncated);
+      const escaped = escapeHTML(str);
+      return escaped.length > limit ? escaped.substring(0, limit) + '…' : escaped;
+    }
+
+    function getDealURL(id) {
+      return `${window.location.origin}/deal.html?id=${id}`;
+    }
+
+    function payPillHTML(status) {
+      const p = PAYMENT_LABELS[status] || PAYMENT_LABELS.unpaid;
+      return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
+    }
+
+    function renderStats() {
+      const statuses = ['pending','active','completed','disputed','expired'];
+      const counts = { total: allDeals.length };
+      statuses.forEach(s => counts[s] = allDeals.filter(({ data: d }) => d.status === s).length);
+      const colors = { total:'#1a1a1a', pending:'#856404', active:'#0a3622', completed:'#004085', disputed:'#721c24', expired:'#555' };
+      document.getElementById('statsBar').innerHTML = Object.entries(counts)
+        .map(([key, val]) => `<span class="stat-pill" style="background:${colors[key]}18;color:${colors[key]}">${val} ${key}</span>`)
+        .join('');
+    }
+
+    function renderFilters() {
+      const filters = ['all','pending','active','completed','disputed','expired'];
+      document.getElementById('filterRow').innerHTML = filters
+        .map(f => `<button class="filter-btn ${currentFilter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)}</button>`)
+        .join('');
+      document.querySelectorAll('.filter-btn').forEach(btn =>
+        btn.addEventListener('click', () => {
+          currentFilter = btn.dataset.filter;
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          renderDeals();
+        })
+      );
+    }
+
+    function renderDeals() {
+      const dealsList = document.getElementById('dealsList');
+      const filtered = allDeals
+        .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
+        .filter(({ data: d }) => {
+          if (!currentSearch) return true;
+          const q = currentSearch.toLowerCase();
+          return (d.clientName || '').toLowerCase().includes(q) ||
+                 (d.workDescription || '').toLowerCase().includes(q);
+        });
+
+      if (filtered.length === 0) {
+        dealsList.innerHTML = `<div class="empty-state"><p>No deals match your filter.</p></div>`;
+        return;
+      }
+
+      const statusClass = s => ({ active:'status-agreed', expired:'status-expired', completed:'status-completed', disputed:'status-disputed' }[s] || 'status-pending');
+
+      dealsList.innerHTML = filtered.map(({ id, data: d }) => {
+        const ps = d.paymentStatus || 'unpaid';
+        const pay = PAYMENT_LABELS[ps] || PAYMENT_LABELS.unpaid;
+        const canUpdatePay = d.status === 'active' || d.status === 'completed';
+
+        return `
+          <div class="deal-card">
+            <div class="deal-card-top">
+              <div>
+                <h3>${safeText(d.workDescription)}</h3>
+                <p class="deal-meta">
+                  Client: ${escapeHTML(d.clientName) || 'Unknown'} &nbsp;&nbsp;
+                  Client: ${escapeHTML(d.clientName || 'Unknown')} &nbsp;&nbsp;
+                  ₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &nbsp;&nbsp;
+                  Due: ${escapeHTML(formatDate(d.deadline))}
+                </p>
+                <div style="margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span id="pay-pill-${id}" class="pay-pill ${pay.cls}">${pay.label}</span>
+                  ${canUpdatePay ? `
+                  <div class="pay-controls">
+                    <select id="pay-sel-${id}">
+                      <option value="unpaid" ${ps==='unpaid'?'selected':''}>Unpaid</option>
+                      <option value="partial" ${ps==='partial'?'selected':''}>Partial</option>
+                      <option value="paid" ${ps==='paid'?'selected':''}>Paid</option>
+                    </select>
+                    <button class="btn-pay" data-payid="${id}">Update</button>
+                  </div>` : ''}
+                </div>
+              </div>
+              <span class="status-badge ${statusClass(d.status)}">${escapeHTML(d.status)}</span>
+            </div>
+            <div class="deal-card-actions">
+              <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-outline btn-sm">View Deal</a>
+              <button class="btn btn-sm" data-copy="${escapeHTML(id)}">Copy Link</button>
+              <button class="btn btn-whatsapp btn-sm" data-whatsapp="${escapeHTML(id)}">WhatsApp</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Payment update handlers
+      dealsList.querySelectorAll('[data-payid]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.dataset.payid;
+          const sel = document.getElementById(`pay-sel-${id}`);
+          const newStatus = sel.value;
+          btn.disabled = true;
+          btn.textContent = '...';
+          try {
+            await updateDoc(doc(db, 'deals', id), { paymentStatus: newStatus });
+            // Update pill in place
+            const pill = document.getElementById(`pay-pill-${id}`);
+            const p = PAYMENT_LABELS[newStatus] || PAYMENT_LABELS.unpaid;
+            pill.className = `pay-pill ${p.cls}`;
+            pill.textContent = p.label;
+            // Update local data
+            const deal = allDeals.find(x => x.id === id);
+            if (deal) deal.data.paymentStatus = newStatus;
+            showToast('Payment status updated ✓');
+          } catch (err) {
+            console.error(err);
+            showToast('Failed to update. Try again.');
+          }
+          btn.disabled = false;
+          btn.textContent = 'Update';
+        });
+      });
+
+      // Copy + WhatsApp handlers
+      dealsList.addEventListener('click', e => {
+        const copyBtn = e.target.closest('[data-copy]');
+        const waBtn = e.target.closest('[data-whatsapp]');
+        if (copyBtn) {
+          navigator.clipboard.writeText(getDealURL(copyBtn.dataset.copy));
+          showToast('Link copied!');
         }
 
         function renderDeals() {
@@ -251,5 +524,53 @@
             window.location.href = 'index.html';
         });
     </script>
+      // Auto-expire past-deadline pending deals & initialize paymentStatus
+      const batch = writeBatch(db);
+      let needsCommit = false;
+      const now = new Date();
+      allDeals.forEach(({ id, data: d }) => {
+        let changed = false;
+        const updates = {};
+        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < now) {
+          updates.status = 'expired';
+          d.status = 'expired';
+          changed = true;
+        }
+        if (!d.paymentStatus) {
+          updates.paymentStatus = 'unpaid';
+          d.paymentStatus = 'unpaid';
+          changed = true;
+        }
+        if (changed) {
+          batch.update(doc(db, 'deals', id), updates);
+          needsCommit = true;
+        }
+      });
+      if (needsCommit) await batch.commit();
+
+      if (allDeals.length === 0) {
+        document.getElementById('dealsList').innerHTML = `
+          <div class="empty-state">
+            <p>No deals yet.</p>
+            <a href="create.html" class="btn">Create your first deal</a>
+          </div>`;
+        return;
+      }
+
+      renderStats();
+      renderFilters();
+      renderDeals();
+
+      document.getElementById('searchInput').addEventListener('input', e => {
+        currentSearch = e.target.value.trim();
+        renderDeals();
+      });
+    });
+
+    document.getElementById('navLogoutBtn').addEventListener('click', async () => {
+      await signOut(auth);
+      window.location.href = 'index.html';
+    });
+  </script>
 </body>
 </html>

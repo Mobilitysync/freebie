@@ -79,11 +79,13 @@
 </head>
 <body>
   <nav class="navbar">
+    <div class="nav-container">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
       <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
+  </div>
   </nav>
 
   <div class="container">
@@ -200,6 +202,17 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     emailjs.init("srtxybM1XCY_0Q07u");
 
     const params = new URLSearchParams(window.location.search);

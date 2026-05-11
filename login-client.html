@@ -9,11 +9,13 @@
 <body>
 
     <nav class="navbar">
+    <div class="nav-container">
         <a href="index.html" class="nav-brand">Freebie</a>
         <div class="nav-right">
             <span id="navUserName"></span>
         </div>
-    </nav>
+    </div>
+  </nav>
 
     <div class="container">
 
@@ -64,6 +66,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { showError, hideError, friendlyError } from "./ui-utils.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -79,17 +82,6 @@
         const auth = getAuth(app);
         const provider = new GoogleAuthProvider();
 
-        const errorEl = document.getElementById('authError');
-
-        function showError(msg) {
-            errorEl.textContent = msg;
-            errorEl.classList.remove('hidden');
-        }
-
-        function clearError() {
-            errorEl.textContent = '';
-            errorEl.classList.add('hidden');
-        }
 
         async function saveUserRole(user, name = '') {
             const ref = doc(db, 'users', user.uid);
@@ -108,7 +100,7 @@
             const ref = doc(db, 'users', user.uid);
             const snap = await getDoc(ref);
             if (snap.exists() && snap.data().role !== 'client') {
-                showError('This account is registered as a freelancer. Please use freelancer login.');
+                showError('authError', 'This account is registered as a freelancer. Please use freelancer login.');
                 await auth.signOut();
                 return;
             }
@@ -120,32 +112,32 @@
 
         // Google login
         document.getElementById('googleBtn').addEventListener('click', async () => {
-            clearError();
+            hideError('authError');
             try {
                 const result = await signInWithPopup(auth, provider);
                 await handleSuccess(result.user);
             } catch (err) {
-                showError(err.message);
+                showError('authError', friendlyError(err.code));
             }
         });
 
         // Email login
         document.getElementById('loginBtn').addEventListener('click', async () => {
-            clearError();
+            hideError('authError');
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            if (!email || !password) { showError('Enter email and password.'); return; }
+            if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
             try {
                 const result = await signInWithEmailAndPassword(auth, email, password);
                 await handleSuccess(result.user);
             } catch (err) {
-                showError('Login failed: ' + err.message);
+                showError('authError', 'Login failed: ' + friendlyError(err.code));
             }
         });
 
         // Show name field on Sign Up click
         document.getElementById('signupBtn').addEventListener('click', () => {
-            clearError();
+            hideError('authError');
             document.getElementById('nameGroup').classList.remove('hidden');
             document.getElementById('authActions').classList.add('hidden');
             document.getElementById('createAccountActions').classList.remove('hidden');
@@ -153,7 +145,7 @@
 
         // Cancel signup
         document.getElementById('cancelSignupBtn').addEventListener('click', () => {
-            clearError();
+            hideError('authError');
             document.getElementById('nameGroup').classList.add('hidden');
             document.getElementById('authActions').classList.remove('hidden');
             document.getElementById('createAccountActions').classList.add('hidden');
@@ -161,12 +153,12 @@
 
         // Create account
         document.getElementById('createAccountBtn').addEventListener('click', async () => {
-            clearError();
+            hideError('authError');
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const name = document.getElementById('nameInput').value.trim();
-            if (!email || !password) { showError('Enter email and password.'); return; }
-            if (!name) { showError('Enter your full name.'); return; }
+            if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
+            if (!name) { showError('authError', 'Enter your full name.'); return; }
             try {
                 const result = await createUserWithEmailAndPassword(auth, email, password);
                 await setDoc(doc(db, 'users', result.user.uid), {
@@ -179,7 +171,7 @@
                 sessionStorage.removeItem('redirectAfterLogin');
                 window.location.href = redirect || 'client-dashboard.html';
             } catch (err) {
-                showError('Signup failed: ' + err.message);
+                showError('authError', 'Signup failed: ' + friendlyError(err.code));
             }
         });
     </script>
