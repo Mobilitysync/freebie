@@ -121,9 +121,17 @@
       return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str).replace(/[&<>"']/g, m => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[m]));
+    }
+
     function safeText(str, limit = 60) {
       if (!str) return 'Untitled work';
-      return str.length > limit ? str.substring(0, limit) + '…' : str;
+      const truncated = str.length > limit ? str.substring(0, limit) + '…' : str;
+      return escapeHTML(truncated);
     }
 
     function getDealURL(id) {
@@ -189,7 +197,7 @@
               <div>
                 <h3>${safeText(d.workDescription)}</h3>
                 <p class="deal-meta">
-                  Client: ${d.clientName || 'Unknown'} &nbsp;&nbsp;
+                  Client: ${escapeHTML(d.clientName) || 'Unknown'} &nbsp;&nbsp;
                   ₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &nbsp;&nbsp;
                   Due: ${formatDate(d.deadline)}
                 </p>
@@ -206,12 +214,12 @@
                   </div>` : ''}
                 </div>
               </div>
-              <span class="status-badge ${statusClass(d.status)}">${d.status}</span>
+              <span class="status-badge ${statusClass(d.status)}">${escapeHTML(d.status)}</span>
             </div>
             <div class="deal-card-actions">
-              <a href="deal.html?id=${id}" class="btn btn-outline btn-sm">View Deal</a>
-              <button class="btn btn-sm" data-copy="${id}">Copy Link</button>
-              <button class="btn btn-whatsapp btn-sm" data-whatsapp="${id}">WhatsApp</button>
+              <a href="deal.html?id=${escapeHTML(id)}" class="btn btn-outline btn-sm">View Deal</a>
+              <button class="btn btn-sm" data-copy="${escapeHTML(id)}">Copy Link</button>
+              <button class="btn btn-whatsapp btn-sm" data-whatsapp="${escapeHTML(id)}">WhatsApp</button>
             </div>
           </div>`;
       }).join('');
