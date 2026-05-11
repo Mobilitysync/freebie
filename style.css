@@ -12,7 +12,7 @@ body {
 }
 
 .container {
-  max-width: 600px;
+  max-width: 1000px;
   margin: 0 auto;
   text-align: center;
   padding-top: 40px;
@@ -234,7 +234,7 @@ body {
   margin-top: 12px;
 }
 
-/* ── DEAL CARD (deal.html) ── */
+/* ── DEAL CARD (Dashboards & Details) ── */
 .deal-card {
   background: #fff;
   border: 1px solid #e0e0e0;
@@ -242,6 +242,26 @@ body {
   padding: 24px;
   margin-top: 24px;
   margin-bottom: 16px;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.deal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+#dealsList {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+@media (min-width: 992px) {
+  #dealsList {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .deal-header {
@@ -363,14 +383,17 @@ body {
 }
 
 .deal-card h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #28251d;
+  letter-spacing: -0.3px;
 }
 
 .deal-meta {
   font-size: 14px;
   color: #666;
+  line-height: 1.6;
 }
 
 .deal-card-actions {
@@ -380,12 +403,13 @@ body {
 }
 
 .status-badge {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
   white-space: nowrap;
-  text-transform: capitalize;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .status-pending   { background: #fff3cd; color: #856404; }
@@ -415,6 +439,42 @@ body {
 .loading-msg {
   color: #999;
   font-size: 15px;
+}
+
+/* ── SKELETON LOADING ── */
+.skeleton-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #eee;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 70%; }
+.skeleton-line.full { width: 100%; }
+
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* ── ROLE CARDS (index.html) ── */
