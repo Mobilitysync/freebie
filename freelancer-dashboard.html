@@ -135,6 +135,15 @@
       return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
     }
 
+    // Debounce helper to limit function calls
+    function debounce(fn, delay) {
+      let timeout;
+      return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
     function renderStats() {
       const statuses = ['pending','active','completed','disputed','expired'];
       const counts = { total: allDeals.length };
@@ -162,11 +171,11 @@
 
     function renderDeals() {
       const dealsList = document.getElementById('dealsList');
+      const q = currentSearch.toLowerCase(); // Hoisted to avoid redundant calls in filter
       const filtered = allDeals
         .filter(({ data: d }) => currentFilter === 'all' || d.status === currentFilter)
         .filter(({ data: d }) => {
-          if (!currentSearch) return true;
-          const q = currentSearch.toLowerCase();
+          if (!q) return true;
           return (d.clientName || '').toLowerCase().includes(q) ||
                  (d.workDescription || '').toLowerCase().includes(q);
         });
@@ -243,21 +252,21 @@
           btn.textContent = 'Update';
         });
       });
-
-      // Copy + WhatsApp handlers
-      dealsList.addEventListener('click', e => {
-        const copyBtn = e.target.closest('[data-copy]');
-        const waBtn = e.target.closest('[data-whatsapp]');
-        if (copyBtn) {
-          navigator.clipboard.writeText(getDealURL(copyBtn.dataset.copy));
-          showToast('Link copied!');
-        }
-        if (waBtn) {
-          const url = getDealURL(waBtn.dataset.whatsapp);
-          window.open(`https://wa.me/?text=${encodeURIComponent('Hi! Review our deal: ' + url)}`, '_blank', 'once');
-        }
-      }, { once: false });
     }
+
+    // Copy + WhatsApp handlers - Moved outside renderDeals to prevent redundant attachments
+    document.getElementById('dealsList').addEventListener('click', e => {
+      const copyBtn = e.target.closest('[data-copy]');
+      const waBtn = e.target.closest('[data-whatsapp]');
+      if (copyBtn) {
+        navigator.clipboard.writeText(getDealURL(copyBtn.dataset.copy));
+        showToast('Link copied!');
+      }
+      if (waBtn) {
+        const url = getDealURL(waBtn.dataset.whatsapp);
+        window.open(`https://wa.me/?text=${encodeURIComponent('Hi! Review our deal: ' + url)}`, '_blank', 'once');
+      }
+    });
 
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
@@ -274,18 +283,6 @@
       const snapshot = await getDocs(q);
       allDeals = snapshot.docs.map(docSnap => ({ id: docSnap.id, data: docSnap.data() }));
 
-      // Auto-expire past-deadline pending deals
-      await Promise.all(allDeals.map(async ({ id, data: d }) => {
-        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
-          await updateDoc(doc(db, 'deals', id), { status: 'expired' });
-          d.status = 'expired';
-        }
-        if (!d.paymentStatus) {
-          await updateDoc(doc(db, 'deals', id), { paymentStatus: 'unpaid' });
-          d.paymentStatus = 'unpaid';
-        }
-      }));
-
       if (allDeals.length === 0) {
         document.getElementById('dealsList').innerHTML = `
           <div class="empty-state">
@@ -299,10 +296,24 @@
       renderFilters();
       renderDeals();
 
-      document.getElementById('searchInput').addEventListener('input', e => {
+      // Maintenance (auto-expiry) moved to background to avoid blocking initial render
+      allDeals.map(async ({ id, data: d }) => {
+        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
+          await updateDoc(doc(db, 'deals', id), { status: 'expired' });
+          d.status = 'expired';
+          renderStats(); renderDeals(); // Refresh UI after background update
+        }
+        if (!d.paymentStatus) {
+          await updateDoc(doc(db, 'deals', id), { paymentStatus: 'unpaid' });
+          d.paymentStatus = 'unpaid';
+        }
+      });
+
+      const handleSearch = debounce(e => {
         currentSearch = e.target.value.trim();
         renderDeals();
-      });
+      }, 250);
+      document.getElementById('searchInput').addEventListener('input', handleSearch);
     });
 
     document.getElementById('navLogoutBtn').addEventListener('click', async () => {
