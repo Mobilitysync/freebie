@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Deal - Freebie</title>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <style>
@@ -79,11 +79,13 @@
 </head>
 <body>
   <nav class="navbar">
+    <div class="nav-container">
     <a href="index.html" class="nav-brand">Freebie</a>
     <div class="nav-right">
       <span id="navUserName"></span>
       <button id="navLogoutBtn" class="btn btn-outline btn-sm">Logout</button>
     </div>
+  </div>
   </nav>
 
   <div class="container">
@@ -187,6 +189,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { payPillHTML } from "./utils.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -200,6 +203,17 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     emailjs.init("srtxybM1XCY_0Q07u");
 
     const params = new URLSearchParams(window.location.search);
@@ -226,15 +240,6 @@
       el.classList.remove('hidden');
     }
 
-    function payPillHTML(status) {
-      const map = {
-        unpaid:  { cls: 'pay-unpaid',  label: 'Unpaid'  },
-        partial: { cls: 'pay-partial', label: 'Partial' },
-        paid:    { cls: 'pay-paid',    label: 'Paid'    }
-      };
-      const p = map[status] || map.unpaid;
-      return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
-    }
 
     // ─── PDF ───────────────────────────────────────────────────
     function downloadPDF(deal, id) {

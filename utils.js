@@ -1,12 +1,15 @@
+export const PAYMENT_LABELS = {
+  unpaid:  { label: 'Unpaid',  cls: 'pay-unpaid'  },
+  partial: { label: 'Partial', cls: 'pay-partial' },
+  paid:    { label: 'Paid',    cls: 'pay-paid'    }
+};
+
 /**
- * Hashes a PIN using SHA-256.
- * @param {string} pin - The PIN to hash.
- * @returns {Promise<string>} The hex-encoded SHA-256 hash.
+ * Returns the HTML for a payment status pill.
+ * @param {string} status - The payment status (unpaid, partial, paid).
+ * @returns {string} HTML string for the pill.
  */
-export async function hashPin(pin) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(pin);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+export function payPillHTML(status) {
+  const p = PAYMENT_LABELS[status] || PAYMENT_LABELS.unpaid;
+  return `<span class="pay-pill ${p.cls}">${p.label}</span>`;
 }
