@@ -1,0 +1,21 @@
+{
+  "name": "freebie",
+  "version": "1.0.0",
+  "description": "A simple freelance deal tracker to simplify and streamline freelancer-client collaboration.",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mobilitysync/freebie.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Mobilitysync/freebie/issues"
+  },
+  "homepage": "https://github.com/Mobilitysync/freebie#readme"
+}

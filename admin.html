@@ -6,23 +6,17 @@
   <title>Freebie Admin</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    .pin-screen {
+    .auth-screen {
       min-height: 100vh; display: flex; align-items: center;
       justify-content: center; background: #f5f5f5;
     }
-    .pin-box {
+    .auth-box {
       background: #fff; border: 1px solid #e0e0e0; border-radius: 12px;
       padding: 40px 32px; width: 100%; max-width: 360px; text-align: center;
     }
-    .pin-box h2 { margin-bottom: 8px; font-size: 22px; }
-    .pin-box p { color: #666; font-size: 14px; margin-bottom: 24px; }
-    .pin-box input {
-      width: 100%; padding: 12px 14px; border: 1px solid #ddd;
-      border-radius: 8px; font-size: 16px; text-align: center;
-      letter-spacing: 4px; margin-bottom: 16px; outline: none;
-    }
-    .pin-box input:focus { border-color: #1a1a1a; }
-    .pin-error { color: #c0392b; font-size: 14px; margin-top: 8px; }
+    .auth-box h2 { margin-bottom: 8px; font-size: 22px; }
+    .auth-box p { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .auth-error { color: #c0392b; font-size: 14px; margin-top: 8px; }
     .admin-panel { display: none; }
     .admin-panel.visible { display: block; }
     .stats-bar { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
@@ -136,17 +130,31 @@
     <input type="password" id="pinInput" maxlength="20" />
     <button class="btn" id="pinSubmitBtn" style="width:100%">Enter</button>
     <p class="pin-error hidden" id="pinError">Incorrect PIN. Try again.</p>
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-box" id="loadingBox">
+    <h2>Verifying Access</h2>
+    <p>Please wait while we check your credentials...</p>
+    <div class="spinner"></div>
+  </div>
+
+  <div class="auth-box hidden" id="deniedBox">
+    <h2 style="color:#c0392b">Access Denied</h2>
+    <p>You do not have administrative privileges to access this panel.</p>
+    <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
   </div>
 </div>
 
 <!-- ADMIN PANEL -->
 <div class="admin-panel" id="adminPanel">
   <nav class="navbar">
+    <div class="nav-container">
     <a href="index.html" class="nav-brand">Freebie Admin</a>
     <div class="nav-right">
       <span style="font-size:13px;color:#888" id="dealCountLabel"></span>
       <button class="btn btn-outline btn-sm" id="logoutAdminBtn">Exit</button>
     </div>
+  </div>
   </nav>
 
   <div class="container" style="max-width:1100px; text-align:left">
@@ -203,6 +211,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getFirestore, collection, getDocs, doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
   import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -220,6 +229,21 @@
 
   let currentUser = null;
   let isAdminAuthenticated = false;
+  // Auth & Role check
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+      window.location.href = 'index.html#auth';
+      return;
+    }
+  function escapeHTML(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
 
   // SHA-256 of "freebie2026"
   const CORRECT_HASH = 'b9a4f3d2c1e6a7b8f0d5c2e3a1b4d7f9c8e2a5b6d3f1c4e7a2b5d8f0c3e6a9';
@@ -266,10 +290,29 @@
       document.getElementById('pinError').classList.remove('hidden');
       document.getElementById('pinInput').value = '';
       document.getElementById('pinInput').focus();
+    try {
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (userDoc.exists() && userDoc.data().role === 'admin') {
+        document.getElementById('authScreen').style.display = 'none';
+        document.getElementById('adminPanel').classList.add('visible');
+        loadDeals();
+      } else {
+        document.getElementById('loadingBox').classList.add('hidden');
+        document.getElementById('deniedBox').classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error("Error checking admin role:", err);
+      document.getElementById('loadingBox').innerHTML = `
+        <h2 style="color:#c0392b">Error</h2>
+        <p>Could not verify permissions. Please try again later.</p>
+        <button class="btn" onclick="window.location.href='index.html'" style="width:100%">Return Home</button>
+      `;
     }
   });
-  document.getElementById('pinInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('pinSubmitBtn').click();
+
+  document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
   });
   document.getElementById('logoutAdminBtn').addEventListener('click', async () => {
     await signOut(auth);
@@ -289,6 +332,13 @@
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function escapeHTML(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>"']/g, m => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[m]));
   }
 
   function formatDate(str) {
@@ -385,26 +435,33 @@
 
     tbody.innerHTML = deals.map(d => {
       const isDisputed = d.status === 'disputed';
+      const resNote = d.resolutionNote || '';
       const resolvedNote = d.resolutionNote
-        ? `<div class="resolution-note">📝 ${d.resolutionNote.substring(0, 60)}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
+        ? `<div class="resolution-note">📝 ${escapeHTML(resNote.substring(0, 60))}${resNote.length > 60 ? '…' : ''}</div>`
         : '';
 
       return `<tr>
-        <td>${d.freelancerName || '—'}<br><span style="font-size:12px;color:#999">${d.freelancerEmail || ''}</span></td>
-        <td>${d.clientName || '—'}<br><span style="font-size:12px;color:#999">${d.clientEmail || ''}</span></td>
-        <td style="max-width:200px">${(d.workDescription||'').substring(0,60)}${(d.workDescription||'').length > 60 ? '…' : ''}</td>
+        <td>${escapeHTML(d.freelancerName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail) || ''}</span></td>
+        <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
+        ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
+        : '';
+
+      return `<tr>
+        <td>${escapeHTML(d.freelancerName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail || '')}</span></td>
+        <td>${escapeHTML(d.clientName || '—')}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail || '')}</span></td>
+        <td style="max-width:200px">${escapeHTML((d.workDescription||'').substring(0,60))}${(d.workDescription||'').length > 60 ? '…' : ''}</td>
         <td>₹${(d.paymentAmount||0).toLocaleString('en-IN')}</td>
-        <td>${formatDate(d.deadline)}</td>
+        <td>${escapeHTML(formatDate(d.deadline))}</td>
         <td>
-          <span class="badge badge-${d.status}">${d.status}</span>
+          <span class="badge badge-${escapeHTML(d.status)}">${escapeHTML(d.status)}</span>
           ${resolvedNote}
         </td>
         <td>${payBadge(d.paymentStatus || 'unpaid')}</td>
         <td>${formatDate(d.createdAt)}</td>
         <td>
-          <a href="deal.html?id=${d.id}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
-          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${d.id}">Resolve</button>` : ''}
-          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${d.id}">Flag Dispute</button>` : ''}
+          <a href="deal.html?id=${escapeHTML(d.id)}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
+          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${escapeHTML(d.id)}">Resolve</button>` : ''}
+          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${escapeHTML(d.id)}">Flag Dispute</button>` : ''}
         </td>
       </tr>`;
     }).join('');
