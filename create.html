@@ -72,6 +72,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { formatDate, formatCurrency } from "./utils.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -120,13 +121,6 @@
       formError.classList.add('hidden');
     }
 
-    function formatDateReadable(dateStr) {
-      if (!dateStr) return '—';
-      const [y, m, d] = dateStr.split('-');
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return `${d} ${months[parseInt(m,10)-1]} ${y}`;
-    }
-
     onAuthStateChanged(auth, async (user) => {
       if (!user) { window.location.href = 'index.html'; return; }
       document.getElementById('navUserName').textContent = user.displayName || user.email;
@@ -161,7 +155,7 @@
       if (!deadline) { showError('Select a deadline.'); return; }
 
       const confirmed = confirm(
-        `Creating deal with:\n\nClient: ${clientName}\nWork: ${workDescription.substring(0, 80)}${workDescription.length > 80 ? '...' : ''}\nAmount: ₹${paymentAmount.toLocaleString('en-IN')}\nDeadline: ${formatDateReadable(deadline)}\n\nProceed?`
+        `Creating deal with:\n\nClient: ${clientName}\nWork: ${workDescription.substring(0, 80)}${workDescription.length > 80 ? '...' : ''}\nAmount: ${formatCurrency(paymentAmount)}\nDeadline: ${formatDate(deadline)}\n\nProceed?`
       );
       if (!confirmed) return;
 
@@ -199,8 +193,8 @@
             client_name: clientName,
             freelancer_name: freelancerName,
             work_description: workDescription,
-            amount: paymentAmount.toLocaleString('en-IN'),
-            deadline: formatDateReadable(deadline),
+            amount: formatCurrency(paymentAmount).replace('₹', ''),
+            deadline: formatDate(deadline),
             deal_link: dealUrl
           });
         } catch (emailErr) {

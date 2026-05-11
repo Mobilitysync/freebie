@@ -91,6 +91,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, query, where, getDocs, getDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
         import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { formatDate, safeText } from "./utils.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA3PZU3-2kuJpnydsKU6VOUP6G-KZH27-E",
@@ -119,18 +120,6 @@
             agreed: 'status-agreed', expired: 'status-expired',
             completed: 'status-completed', disputed: 'status-disputed'
         };
-
-        function formatDate(dateStr) {
-            if (!dateStr) return 'No deadline';
-            return new Date(dateStr).toLocaleDateString('en-IN', {
-                day: 'numeric', month: 'short', year: 'numeric'
-            });
-        }
-
-        function safeText(str, limit = 60) {
-            if (!str) return 'Untitled work';
-            return str.length > limit ? str.substring(0, limit) + '...' : str;
-        }
 
         function renderStats() {
             const statuses = ['pending', 'agreed', 'completed', 'disputed', 'expired'];
