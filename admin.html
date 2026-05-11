@@ -274,6 +274,13 @@
     setTimeout(() => t.classList.remove('show'), 2500);
   }
 
+  function escapeHTML(str) {
+    if (!str) return "";
+    return String(str).replace(/[&<>"']/g, m => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[m]));
+  }
+
   function formatDate(str) {
     if (!str) return '—';
     return new Date(str).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -360,7 +367,14 @@
 
     tbody.innerHTML = deals.map(d => {
       const isDisputed = d.status === 'disputed';
+      const resNote = d.resolutionNote || '';
       const resolvedNote = d.resolutionNote
+        ? `<div class="resolution-note">📝 ${escapeHTML(resNote.substring(0, 60))}${resNote.length > 60 ? '…' : ''}</div>`
+        : '';
+
+      return `<tr>
+        <td>${escapeHTML(d.freelancerName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.freelancerEmail) || ''}</span></td>
+        <td>${escapeHTML(d.clientName) || '—'}<br><span style="font-size:12px;color:#999">${escapeHTML(d.clientEmail) || ''}</span></td>
         ? `<div class="resolution-note">📝 ${escapeHTML(d.resolutionNote.substring(0, 60))}${d.resolutionNote.length > 60 ? '…' : ''}</div>`
         : '';
 
@@ -377,9 +391,9 @@
         <td>${payBadge(d.paymentStatus || 'unpaid')}</td>
         <td>${formatDate(d.createdAt)}</td>
         <td>
-          <a href="deal.html?id=${d.id}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
-          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${d.id}">Resolve</button>` : ''}
-          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${d.id}">Flag Dispute</button>` : ''}
+          <a href="deal.html?id=${escapeHTML(d.id)}" target="_blank" style="font-size:13px;color:#01696f;text-decoration:none;">View</a>
+          ${isDisputed ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px" data-resolve="${escapeHTML(d.id)}">Resolve</button>` : ''}
+          ${!isDisputed && d.status !== 'expired' ? `<br><button class="btn btn-sm" style="margin-top:6px;font-size:12px;background:#f8d7da;color:#721c24;border:none" data-flag="${escapeHTML(d.id)}">Flag Dispute</button>` : ''}
         </td>
       </tr>`;
     }).join('');
