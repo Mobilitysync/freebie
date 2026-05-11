@@ -186,7 +186,22 @@
       background: #f0f7f4;
       color: #01696f;
     }
-    .role-option .role-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+    .role-option .role-icon {
+      font-size: 20px;
+      display: block;
+      margin-bottom: 4px;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+      will-change: transform;
+    }
+    .role-option:hover .role-icon,
+    .role-option:focus-visible .role-icon {
+      transform: translateY(-5px) scale(1.25) rotate(8deg);
+      filter: drop-shadow(0 6px 8px rgba(0,0,0,0.15));
+    }
+    .role-option:active .role-icon {
+      transform: translateY(-2px) scale(1.1) rotate(-5deg);
+      transition-duration: 0.1s;
+    }
     .auth-submit { width: 100%; padding: 12px; font-size: 15px; margin-top: 8px; }
     .auth-error {
       font-size: 13px;
