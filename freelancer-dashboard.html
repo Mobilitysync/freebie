@@ -499,6 +499,13 @@
             renderFilters();
             renderDeals();
 
+      // Auto-expire past-deadline pending deals
+      const batch = writeBatch(db);
+      let hasUpdates = false;
+
+      allDeals.forEach(({ id, data: d }) => {
+        const updates = {};
+        if (d.status === 'pending' && d.deadline && new Date(d.deadline) < new Date()) {
             requestIdleCallback(async () => {
                 let changed = false;
                 const updates = allDeals.map(async ({ id, data: d }) => {
@@ -545,6 +552,14 @@
           batch.update(doc(db, 'deals', id), updates);
           needsCommit = true;
         }
+
+        if (Object.keys(updates).length > 0) {
+          batch.update(doc(db, 'deals', id), updates);
+          hasUpdates = true;
+        }
+      });
+
+      if (hasUpdates) await batch.commit();
       });
       if (needsCommit) await batch.commit();
 
