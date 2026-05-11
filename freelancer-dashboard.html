@@ -99,6 +99,16 @@
     const db = getFirestore(app);
     const auth = getAuth(app);
 
+    function escapeHTML(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
     let allDeals = [];
     let currentFilter = 'all';
     let currentSearch = '';
@@ -123,7 +133,8 @@
 
     function safeText(str, limit = 60) {
       if (!str) return 'Untitled work';
-      return str.length > limit ? str.substring(0, limit) + '…' : str;
+      const escaped = escapeHTML(str);
+      return escaped.length > limit ? escaped.substring(0, limit) + '…' : escaped;
     }
 
     function getDealURL(id) {
@@ -189,9 +200,9 @@
               <div>
                 <h3>${safeText(d.workDescription)}</h3>
                 <p class="deal-meta">
-                  Client: ${d.clientName || 'Unknown'} &nbsp;&nbsp;
+                  Client: ${escapeHTML(d.clientName || 'Unknown')} &nbsp;&nbsp;
                   ₹${(d.paymentAmount || 0).toLocaleString('en-IN')} &nbsp;&nbsp;
-                  Due: ${formatDate(d.deadline)}
+                  Due: ${escapeHTML(formatDate(d.deadline))}
                 </p>
                 <div style="margin-top:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                   <span id="pay-pill-${id}" class="pay-pill ${pay.cls}">${pay.label}</span>
@@ -206,7 +217,7 @@
                   </div>` : ''}
                 </div>
               </div>
-              <span class="status-badge ${statusClass(d.status)}">${d.status}</span>
+              <span class="status-badge ${statusClass(d.status)}">${escapeHTML(d.status)}</span>
             </div>
             <div class="deal-card-actions">
               <a href="deal.html?id=${id}" class="btn btn-outline btn-sm">View Deal</a>
