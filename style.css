@@ -504,3 +504,9 @@ body {
 
 /* ── UTILITY ── */
 .hidden { display: none; }
+
+/* ── ACCESSIBILITY ── */
+*:focus-visible {
+  outline: 2px solid #01696f;
+  outline-offset: 2px;
+}

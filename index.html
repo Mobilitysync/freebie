@@ -329,14 +329,14 @@
           <input type="password" id="suPassword" placeholder="Min. 6 characters" autocomplete="new-password" />
         </div>
         <div class="form-group">
-          <label>I am a</label>
-          <div class="role-row">
-            <div class="role-option selected" data-role="freelancer" id="roleFreelancer">
+          <label id="role-label">I am a</label>
+          <div class="role-row" role="radiogroup" aria-labelledby="role-label">
+            <button type="button" class="role-option selected" data-role="freelancer" id="roleFreelancer" role="radio" aria-checked="true">
               <span class="role-icon">💼</span>Freelancer
-            </div>
-            <div class="role-option" data-role="client" id="roleClient">
+            </button>
+            <button type="button" class="role-option" data-role="client" id="roleClient" role="radio" aria-checked="false">
               <span class="role-icon">🏢</span>Client
-            </div>
+            </button>
           </div>
         </div>
         <button class="btn auth-submit" id="signupBtn">Create Account</button>
@@ -407,8 +407,12 @@
     // ─── Role selector ────────────────────────────────────────
     document.querySelectorAll('.role-option').forEach(opt => {
       opt.addEventListener('click', () => {
-        document.querySelectorAll('.role-option').forEach(o => o.classList.remove('selected'));
+        document.querySelectorAll('.role-option').forEach(o => {
+          o.classList.remove('selected');
+          o.setAttribute('aria-checked', 'false');
+        });
         opt.classList.add('selected');
+        opt.setAttribute('aria-checked', 'true');
         selectedRole = opt.dataset.role;
       });
     });
