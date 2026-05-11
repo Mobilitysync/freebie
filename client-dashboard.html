@@ -105,6 +105,16 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
+        function escapeHTML(str) {
+            if (!str) return "";
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         let allDeals = [];
         let currentFilter = 'all';
         let currentSearch = '';
@@ -129,7 +139,8 @@
 
         function safeText(str, limit = 60) {
             if (!str) return 'Untitled work';
-            return str.length > limit ? str.substring(0, limit) + '...' : str;
+            const escaped = escapeHTML(str);
+            return escaped.length > limit ? escaped.substring(0, limit) + '...' : escaped;
         }
 
         function renderStats() {
@@ -197,14 +208,14 @@
                         <div>
                             <h3>${safeText(d.workDescription)}</h3>
                             <p class="deal-meta">
-                                Freelancer: ${d.freelancerName || 'Unknown'}
+                                Freelancer: ${escapeHTML(d.freelancerName || 'Unknown')}
                                 &nbsp;|&nbsp; ₹${(d.paymentAmount || 0).toLocaleString('en-IN')}
-                                &nbsp;|&nbsp; Due: ${formatDate(d.deadline)}
+                                &nbsp;|&nbsp; Due: ${escapeHTML(formatDate(d.deadline))}
                             </p>
-                            <p class="deal-meta" style="margin-top:4px;">${agreedText}</p>
+                            <p class="deal-meta" style="margin-top:4px;">${escapeHTML(agreedText)}</p>
                             <span class="pay-pill ${pay.cls}">${pay.label}</span>
                         </div>
-                        <span class="status-badge ${sc}">${d.status}</span>
+                        <span class="status-badge ${sc}">${escapeHTML(d.status)}</span>
                     </div>
                     <div class="deal-card-actions">
                         <a href="deal.html?id=${id}" class="btn btn-sm">View & Agree</a>
