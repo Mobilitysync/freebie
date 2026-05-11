@@ -10,6 +10,19 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* Landing-specific styles */
+    body {
+      background: linear-gradient(-45deg, #f7f6f2, #f0f7f4, #e8e5e0, #f7f6f2);
+      background-size: 400% 400%;
+      animation: flowingBackground 15s ease infinite;
+    }
+    @keyframes flowingBackground {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      body { animation: none; }
+    }
     .hero {
       text-align: center;
       padding: 80px 24px 64px;
@@ -187,12 +200,14 @@
       color: #01696f;
     }
     .role-option .role-icon {
-      font-size: 20px;
-      display: block;
-      margin-bottom: 4px;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 6px;
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
       will-change: transform;
+      color: #666;
     }
+    .role-option.selected .role-icon { color: #01696f; }
     .role-option:hover .role-icon,
     .role-option:focus-visible .role-icon {
       transform: translateY(-5px) scale(1.25) rotate(8deg);
@@ -347,10 +362,14 @@
           <label id="role-label">I am a</label>
           <div class="role-row" role="radiogroup" aria-labelledby="role-label">
             <button type="button" class="role-option selected" data-role="freelancer" id="roleFreelancer" role="radio" aria-checked="true">
-              <span class="role-icon">💼</span>Freelancer
+              <span class="role-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+              </span>Freelancer
             </button>
             <button type="button" class="role-option" data-role="client" id="roleClient" role="radio" aria-checked="false">
-              <span class="role-icon">🏢</span>Client
+              <span class="role-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><path d="M9 22v-4h6v4"></path><path d="M8 6h.01"></path><path d="M16 6h.01"></path><path d="M8 10h.01"></path><path d="M16 10h.01"></path><path d="M8 14h.01"></path><path d="M16 14h.01"></path></svg>
+              </span>Client
             </button>
           </div>
         </div>

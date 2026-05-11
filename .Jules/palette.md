@@ -5,3 +5,7 @@
 ## 2025-05-14 - [3D Icon Interaction with CSS Transforms]
 **Learning:** Micro-interactions like "3D" moving effects can be achieved efficiently using CSS transforms and transitions on hover/focus. Using `cubic-bezier` timing functions adds a playful, springy feel that enhances perceived quality.
 **Action:** Use `transform: translateY() scale() rotate()` with a `drop-shadow` filter to create depth and movement for icons on interactive elements. Ensure these are also triggered on `:focus-visible` for keyboard accessibility.
+
+## 2025-05-14 - [Live Animated Backgrounds]
+**Learning:** Adding a "live" feel to a page can be achieved with a slow-moving linear-gradient animation on the `body`. This adds visual interest without requiring heavy assets or JavaScript.
+**Action:** Use a multi-color `linear-gradient` with `background-size: 400% 400%` and a long-duration `animation` targeting `background-position`. Always include `@media (prefers-reduced-motion: reduce)` to disable the animation for users who may find it disorienting.
