@@ -382,7 +382,7 @@
       getAuth, onAuthStateChanged,
       signInWithEmailAndPassword, createUserWithEmailAndPassword,
       updateProfile, sendPasswordResetEmail,
-      GoogleAuthProvider, signInWithPopup
+      GoogleAuthProvider, signInWithRedirect, getRedirectResult
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
     import { showError, hideError, friendlyError } from "./ui-utils.js";
@@ -397,6 +397,22 @@
     const googleProvider = new GoogleAuthProvider();
 
     const $ = id => document.getElementById(id);
+
+    // ─── Handle Redirect Login ───────────────────────────────
+    try {
+      const result = await getRedirectResult(auth);
+      if (result) {
+        const user = result.user;
+        const existing = await getDoc(doc(db, 'users', user.uid));
+        if (!existing.exists()) {
+          const role = sessionStorage.getItem('authSelectedRole') || 'freelancer';
+          await saveUser(user, role, user.displayName);
+        }
+      }
+    } catch (err) {
+      showError('siError', friendlyError(err.code));
+      showError('suError', friendlyError(err.code));
+    }
 
     // ─── Redirect if already logged in ───────────────────────
     onAuthStateChanged(auth, async (user) => {
@@ -496,13 +512,9 @@
     // ─── Google ───────────────────────────────────────────────
     async function googleAuth() {
       ['siError','suError'].forEach(hideError);
+      sessionStorage.setItem('authSelectedRole', selectedRole);
       try {
-        const result = await signInWithPopup(auth, googleProvider);
-        const user = result.user;
-        const existing = await getDoc(doc(db, 'users', user.uid));
-        if (!existing.exists()) {
-          await saveUser(user, selectedRole, user.displayName);
-        }
+        await signInWithRedirect(auth, googleProvider);
       } catch (err) {
         showError('siError', friendlyError(err.code));
         showError('suError', friendlyError(err.code));
