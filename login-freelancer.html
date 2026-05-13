@@ -68,27 +68,17 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { showError, hideError, friendlyError } from "./ui-utils.js";
 
     // ─── Fetch config securely from backend ──────────────────
     const res = await fetch('/api/config');
     const firebaseConfig = await res.json();
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
+    const app      = initializeApp(firebaseConfig);
+    const db       = getFirestore(app);
+    const auth     = getAuth(app);
     const provider = new GoogleAuthProvider();
-
-    // ─── Handle Redirect Login ───────────────────────────────
-    try {
-      const result = await getRedirectResult(auth);
-      if (result) {
-        await handleSuccess(result.user);
-      }
-    } catch (err) {
-      showError('authError', friendlyError(err.code));
-    }
 
     function getRedirect() {
       const r = sessionStorage.getItem('redirectAfterLogin');
@@ -97,7 +87,7 @@
     }
 
     async function handleSuccess(user) {
-      const ref = doc(db, 'users', user.uid);
+      const ref  = doc(db, 'users', user.uid);
       const snap = await getDoc(ref);
       if (snap.exists() && snap.data().role !== 'freelancer') {
         showError('authError', 'This account is registered as a client. Please use client login.');
@@ -115,20 +105,23 @@
       window.location.href = getRedirect();
     }
 
-    // Google
+    // ─── Google Login ─────────────────────────────────────────
     document.getElementById('googleBtn').addEventListener('click', async () => {
       hideError('authError');
       try {
-        await signInWithRedirect(auth, provider);
+        const result = await signInWithPopup(auth, provider);
+        await handleSuccess(result.user);
       } catch (err) {
-        showError('authError', friendlyError(err.code));
+        if (err.code !== 'auth/popup-closed-by-user') {
+          showError('authError', friendlyError(err.code));
+        }
       }
     });
 
-    // Login
+    // ─── Email Login ──────────────────────────────────────────
     document.getElementById('loginBtn').addEventListener('click', async () => {
       hideError('authError');
-      const email = document.getElementById('email').value.trim();
+      const email    = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
       try {
@@ -139,7 +132,7 @@
       }
     });
 
-    // Show signup step
+    // ─── Sign Up Flow ─────────────────────────────────────────
     document.getElementById('signupBtn').addEventListener('click', () => {
       hideError('authError');
       document.getElementById('authActions').classList.add('hidden');
@@ -148,7 +141,6 @@
       document.getElementById('signupStep').classList.remove('hidden');
     });
 
-    // Cancel signup
     document.getElementById('cancelSignupBtn').addEventListener('click', () => {
       hideError('authError');
       document.getElementById('authActions').classList.remove('hidden');
@@ -157,14 +149,13 @@
       document.getElementById('signupStep').classList.add('hidden');
     });
 
-    // Create account
     document.getElementById('createAccountBtn').addEventListener('click', async () => {
       hideError('authError');
-      const email = document.getElementById('email').value.trim();
+      const email    = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
-      const name = document.getElementById('nameInput').value.trim();
+      const name     = document.getElementById('nameInput').value.trim();
       if (!email || !password) { showError('authError', 'Enter email and password.'); return; }
-      if (!name) { showError('authError', 'Enter your full name.'); return; }
+      if (!name)                { showError('authError', 'Enter your full name.'); return; }
       try {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await setDoc(doc(db, 'users', result.user.uid), {
