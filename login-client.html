@@ -65,7 +65,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { showError, hideError, friendlyError } from "./ui-utils.js";
 
     // ─── Fetch config securely from backend ──────────────────
@@ -76,6 +76,16 @@
     const db       = getFirestore(app);
     const auth     = getAuth(app);
     const provider = new GoogleAuthProvider();
+
+    // ─── Handle Redirect Login ───────────────────────────────
+    try {
+      const result = await getRedirectResult(auth);
+      if (result) {
+        await handleSuccess(result.user);
+      }
+    } catch (err) {
+      showError('authError', friendlyError(err.code));
+    }
 
     async function saveUserRole(user, name = '') {
       const ref  = doc(db, 'users', user.uid);
@@ -107,8 +117,7 @@
     document.getElementById('googleBtn').addEventListener('click', async () => {
       hideError('authError');
       try {
-        const result = await signInWithPopup(auth, provider);
-        await handleSuccess(result.user);
+        await signInWithRedirect(auth, provider);
       } catch (err) {
         showError('authError', friendlyError(err.code));
       }
